@@ -32,14 +32,23 @@ export interface RetellAgent {
   ambient_sound: string | null;
   ambient_sound_volume: number;
   language: string | null;
+  channel?: "voice" | "phone" | "web" | string;
   webhook_url: string | null;
   webhook_events: string[];
   boosted_keywords: string[];
   enable_dnc_detection: boolean;
+  allow_user_dtmf?: boolean;
+  contact_memory_config?: {
+    enabled?: boolean;
+    enable_read?: boolean;
+    enable_update?: boolean;
+    [key: string]: unknown;
+  };
   end_call_after_silence_ms: number;
   max_call_duration_ms: number;
   post_call_analysis_data: Record<string, unknown>[];
   last_modification_timestamp: number;
+  [key: string]: unknown;
 }
 
 export interface ListAgentsResponse {
