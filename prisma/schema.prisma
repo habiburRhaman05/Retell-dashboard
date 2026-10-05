@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Location {
+  id         String          @id @default(cuid())
+  locationId String          @unique @map("location_id")
+  name       String?
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+  agents     LocationAgent[]
+
+  @@map("locations")
+}
+
+model LocationAgent {
+  id            String   @id @default(cuid())
+  locationId    String   @map("location_id")
+  retellAgentId String   @map("retell_agent_id")
+  agentName     String?  @map("agent_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  location Location @relation(fields: [locationId], references: [locationId], onDelete: Cascade)
+
+  @@unique([locationId, retellAgentId])
+  @@index([locationId])
+  @@index([retellAgentId])
+  @@map("location_agents")
+}
