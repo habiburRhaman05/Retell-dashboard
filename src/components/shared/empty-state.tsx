@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Bot, Plus } from "lucide-react";
+import { Bot, Plus, Download } from "lucide-react";
 
 export function EmptyState({
   title,
   description,
   actionLabel,
   actionHref,
+  onAction,
 }: {
   title: string;
   description: string;
   actionLabel?: string;
   actionHref?: string;
+  onAction?: () => void;
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
@@ -33,6 +35,15 @@ export function EmptyState({
           <Plus className="w-3.5 h-3.5" />
           {actionLabel}
         </Link>
+      )}
+      {actionLabel && onAction && !actionHref && (
+        <button
+          onClick={onAction}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-cyan-500 text-white text-[13px] font-medium hover:bg-cyan-600 transition-colors shadow-sm shadow-cyan-500/20"
+        >
+          <Download className="w-3.5 h-3.5" />
+          {actionLabel}
+        </button>
       )}
     </div>
   );
