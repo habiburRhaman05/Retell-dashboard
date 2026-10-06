@@ -19,6 +19,7 @@ import {
 import { PronunciationEditor } from "@/components/agents/pronunciation-editor";
 import { PostCallAnalysisEditor } from "@/components/agents/post-call-analysis-editor";
 import { FunctionsEditor } from "@/components/agents/functions-editor";
+import { KnowledgeBaseSelector } from "@/components/agents/knowledge-base-selector";
 import { TestCallPanel } from "@/components/agents/test-call-panel";
 import { VersionHistoryPanel } from "@/components/agents/version-history-panel";
 import {
@@ -75,7 +76,7 @@ export default function AgentDetailPage() {
   const updateAgentMut = useUpdateAgent(locationId);
 
   const llmId = agent?.response_engine?.llm_id;
-  const { data: llm } = useQuery<RetellLlm>({
+  const { data: llm, isLoading: llmLoading } = useQuery<RetellLlm>({
     queryKey: ["llm", llmId],
     queryFn: () => fetchJson<RetellLlm>(`/api/retell/llm/${llmId}`),
     enabled: !!llmId,
@@ -339,7 +340,13 @@ export default function AgentDetailPage() {
           </div>
 
           {/* Right: Settings panels */}
-          <div className="w-full lg:w-[380px] shrink-0 overflow-y-auto bg-gray-50/50">
+          <div className="w-full lg:w-[380px] shrink-0 overflow-y-auto bg-gray-50/50 relative">
+            {(updateAgentMut.isPending || updateLlmMut.isPending) && (
+              <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 bg-cyan-500 text-white text-[12px] font-medium shadow-sm">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Saving changes...
+              </div>
+            )}
             <SettingsPanel icon={Mic} title="Speech settings" defaultOpen>
               <SliderSetting
                 label="Voice Speed"
@@ -670,11 +677,18 @@ export default function AgentDetailPage() {
             </SettingsPanel>
 
             <SettingsPanel icon={Zap} title="Functions">
-              <FunctionsEditor
-                tools={(llm?.general_tools ?? []) as RetellLlmTool[]}
-                isSaving={updateLlmMut.isPending}
-                onSave={(tools) => handleUpdateLlm({ general_tools: tools })}
-              />
+              {llmLoading ? (
+                <div className="px-4 py-6 flex items-center justify-center gap-2 text-gray-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-[12px]">Loading functions...</span>
+                </div>
+              ) : (
+                <FunctionsEditor
+                  tools={(llm?.general_tools ?? []) as RetellLlmTool[]}
+                  isSaving={updateLlmMut.isPending}
+                  onSave={(tools) => handleUpdateLlm({ general_tools: tools })}
+                />
+              )}
             </SettingsPanel>
 
             <SettingsPanel icon={BrainCircuit} title="Knowledge base & memory">
@@ -704,21 +718,15 @@ export default function AgentDetailPage() {
                   })
                 }
               />
-              {llm?.knowledge_base_ids && llm.knowledge_base_ids.length > 0 && (
-                <div className="px-4 py-3 border-t border-gray-100">
-                  <p className="text-[12px] text-gray-500 mb-1">
-                    Knowledge Bases
-                  </p>
-                  {llm.knowledge_base_ids.map((id) => (
-                    <div
-                      key={id}
-                      className="text-[11px] font-mono text-gray-600 bg-gray-50 px-2 py-1 rounded mt-1"
-                    >
-                      {id}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="border-t border-gray-100">
+                <KnowledgeBaseSelector
+                  locationId={locationId}
+                  attachedIds={llm?.knowledge_base_ids ?? []}
+                  isLoading={llmLoading}
+                  isSaving={updateLlmMut.isPending}
+                  onSave={(ids) => handleUpdateLlm({ knowledge_base_ids: ids })}
+                />
+              </div>
             </SettingsPanel>
 
             <SettingsPanel icon={Languages} title="Pronunciation">
