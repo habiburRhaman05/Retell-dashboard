@@ -10,8 +10,15 @@ import type { RetellAgent, CreateAgentPayload, UpdateAgentPayload } from "@/type
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, options);
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(body || `Request failed: ${res.status}`);
+    const text = await res.text();
+    let message = `Request failed (${res.status})`;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed?.error) message = parsed.error;
+    } catch {
+      if (text) message = text;
+    }
+    throw new Error(message);
   }
   if (res.status === 204) return undefined as T;
   return res.json();

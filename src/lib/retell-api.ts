@@ -4,6 +4,8 @@ import type {
   CreateAgentPayload,
   UpdateAgentPayload,
   ListVersionsResponse,
+  KnowledgeBase,
+  CreateWebCallResponse,
 } from "@/types/retell";
 
 const RETELL_BASE_URL = "https://api.retellai.com";
@@ -19,13 +21,19 @@ async function retellFetch<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${RETELL_BASE_URL}${path}`;
+  const isFormData = options.body instanceof FormData;
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${getApiKey()}`,
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(options.headers as Record<string, string> | undefined),
+  };
+  // Never let an explicit Content-Type override FormData's own multipart boundary.
+  if (isFormData) delete headers["Content-Type"];
+
   const res = await fetch(url, {
     ...options,
-    headers: {
-      Authorization: `Bearer ${getApiKey()}`,
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    headers,
   });
 
   if (!res.ok) {
@@ -136,6 +144,15 @@ export async function deleteAgentVersion(agentId: string): Promise<void> {
   });
 }
 
+export async function createWebCall(
+  agentId: string
+): Promise<CreateWebCallResponse> {
+  return retellFetch<CreateWebCallResponse>("/v3/create-web-call", {
+    method: "POST",
+    body: JSON.stringify({ agent_id: agentId }),
+  });
+}
+
 export async function getRetellLlm(llmId: string): Promise<RetellLlm> {
   return retellFetch<RetellLlm>(`/get-retell-llm/${llmId}`);
 }
@@ -148,4 +165,54 @@ export async function updateRetellLlm(
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+export async function listKnowledgeBases(): Promise<KnowledgeBase[]> {
+  return retellFetch<KnowledgeBase[]>("/list-knowledge-bases");
+}
+
+export async function getKnowledgeBase(
+  knowledgeBaseId: string
+): Promise<KnowledgeBase> {
+  return retellFetch<KnowledgeBase>(`/get-knowledge-base/${knowledgeBaseId}`);
+}
+
+export async function createKnowledgeBase(
+  form: FormData
+): Promise<KnowledgeBase> {
+  return retellFetch<KnowledgeBase>("/create-knowledge-base", {
+    method: "POST",
+    body: form,
+  });
+}
+
+export async function addKnowledgeBaseSources(
+  knowledgeBaseId: string,
+  form: FormData
+): Promise<KnowledgeBase> {
+  return retellFetch<KnowledgeBase>(
+    `/add-knowledge-base-sources/${knowledgeBaseId}`,
+    {
+      method: "POST",
+      body: form,
+    }
+  );
+}
+
+export async function deleteKnowledgeBase(
+  knowledgeBaseId: string
+): Promise<void> {
+  await retellFetch<void>(`/delete-knowledge-base/${knowledgeBaseId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function deleteKnowledgeBaseSource(
+  knowledgeBaseId: string,
+  sourceId: string
+): Promise<KnowledgeBase> {
+  return retellFetch<KnowledgeBase>(
+    `/delete-knowledge-base-source/${knowledgeBaseId}/source/${sourceId}`,
+    { method: "DELETE" }
+  );
 }

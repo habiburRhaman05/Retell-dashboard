@@ -25,6 +25,11 @@ const NAV_LINKS: NavLink[] = [
     href: (loc) => `/retell/${loc}/agents`,
     exactMatch: true,
   },
+  {
+    label: "Knowledge Base",
+    href: (loc) => `/retell/${loc}/knowledge-base`,
+    exactMatch: true,
+  },
 ];
 
 export function TopNavbar() {

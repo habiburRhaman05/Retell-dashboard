@@ -8,12 +8,13 @@ datasource db {
 }
 
 model Location {
-  id         String          @id @default(cuid())
-  locationId String          @unique @map("location_id")
-  name       String?
-  createdAt  DateTime        @default(now()) @map("created_at")
-  updatedAt  DateTime        @updatedAt @map("updated_at")
-  agents     LocationAgent[]
+  id             String                  @id @default(cuid())
+  locationId     String                  @unique @map("location_id")
+  name           String?
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+  agents         LocationAgent[]
+  knowledgeBases LocationKnowledgeBase[]
 
   @@map("locations")
 }
@@ -32,4 +33,20 @@ model LocationAgent {
   @@index([locationId])
   @@index([retellAgentId])
   @@map("location_agents")
+}
+
+model LocationKnowledgeBase {
+  id                     String   @id @default(cuid())
+  locationId             String   @map("location_id")
+  retellKnowledgeBaseId  String   @map("retell_knowledge_base_id")
+  knowledgeBaseName      String?  @map("knowledge_base_name")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  location Location @relation(fields: [locationId], references: [locationId], onDelete: Cascade)
+
+  @@unique([locationId, retellKnowledgeBaseId])
+  @@index([locationId])
+  @@index([retellKnowledgeBaseId])
+  @@map("location_knowledge_bases")
 }

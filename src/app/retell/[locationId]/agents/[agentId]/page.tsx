@@ -7,11 +7,25 @@ import { useDeleteAgent, useUpdateAgent } from "@/hooks/use-agents";
 import { useToast } from "@/components/layout/toast";
 import { cn, timeAgo } from "@/lib/utils";
 import {
+  SettingsPanel,
+  SliderSetting,
+  ToggleSetting,
+  SelectSetting,
+  RadioGroupSetting,
+  NumberSetting,
+  TextSetting,
+  TagListSetting,
+} from "@/components/agents/field-controls";
+import { PronunciationEditor } from "@/components/agents/pronunciation-editor";
+import { PostCallAnalysisEditor } from "@/components/agents/post-call-analysis-editor";
+import { FunctionsEditor } from "@/components/agents/functions-editor";
+import { TestCallPanel } from "@/components/agents/test-call-panel";
+import { VersionHistoryPanel } from "@/components/agents/version-history-panel";
+import {
   ArrowLeft,
   Trash2,
   Copy,
   Save,
-  ChevronDown,
   Volume2,
   Phone,
   BarChart3,
@@ -19,17 +33,31 @@ import {
   Mic,
   Settings2,
   Loader2,
+  PhoneCall,
+  History,
+  Radio,
+  Languages,
+  Webhook,
+  Database,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { RetellLlm } from "@/types/retell";
+import type { RetellLlm, PronunciationEntry, PostCallAnalysisItem, RetellLlmTool } from "@/types/retell";
 
 async function fetchJson<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, opts);
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(body || `Request failed: ${res.status}`);
+    const text = await res.text();
+    let message = `Request failed (${res.status})`;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed?.error) message = parsed.error;
+    } catch {
+      if (text) message = text;
+    }
+    throw new Error(message);
   }
   return res.json();
 }
@@ -67,21 +95,23 @@ export default function AgentDetailPage() {
 
   const [prompt, setPrompt] = useState("");
   const [beginMessage, setBeginMessage] = useState("");
-  const [hasChanges, setHasChanges] = useState(false);
+  const [showTestCall, setShowTestCall] = useState(false);
+  const [showVersions, setShowVersions] = useState(false);
 
-  useEffect(() => {
-    if (llm) {
-      setPrompt(llm.general_prompt || "");
-      setBeginMessage(llm.begin_message || "");
-    }
-  }, [llm]);
+  // Sync local editor state whenever a *different* LLM loads (initial load,
+  // or navigating to another agent) — not on every background refetch, so
+  // in-progress edits aren't clobbered. This runs during render per React's
+  // "adjusting state when a prop changes" guidance rather than in an effect.
+  const [syncedLlmId, setSyncedLlmId] = useState<string | undefined>(undefined);
+  if (llm && llm.llm_id !== syncedLlmId) {
+    setSyncedLlmId(llm.llm_id);
+    setPrompt(llm.general_prompt || "");
+    setBeginMessage(llm.begin_message || "");
+  }
 
-  useEffect(() => {
-    if (!llm) return;
-    const promptChanged = prompt !== (llm.general_prompt || "");
-    const msgChanged = beginMessage !== (llm.begin_message || "");
-    setHasChanges(promptChanged || msgChanged);
-  }, [prompt, beginMessage, llm]);
+  const hasChanges = llm
+    ? prompt !== (llm.general_prompt || "") || beginMessage !== (llm.begin_message || "")
+    : false;
 
   const handleSavePrompt = useCallback(async () => {
     if (!llmId) return;
@@ -90,10 +120,9 @@ export default function AgentDetailPage() {
         general_prompt: prompt,
         begin_message: beginMessage,
       });
-      setHasChanges(false);
       toast("Prompt saved", "success");
-    } catch {
-      toast("Failed to save prompt", "error");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Failed to save prompt", "error");
     }
   }, [llmId, prompt, beginMessage, updateLlmMut, toast]);
 
@@ -103,11 +132,23 @@ export default function AgentDetailPage() {
         await updateAgentMut.mutateAsync({ agentId, data });
         queryClient.invalidateQueries({ queryKey: ["agent", agentId] });
         toast("Settings saved", "success");
-      } catch {
-        toast("Failed to save settings", "error");
+      } catch (err) {
+        toast(err instanceof Error ? err.message : "Failed to save settings", "error");
       }
     },
     [agentId, updateAgentMut, queryClient, toast]
+  );
+
+  const handleUpdateLlm = useCallback(
+    async (data: Partial<RetellLlm>) => {
+      try {
+        await updateLlmMut.mutateAsync(data);
+        toast("Saved", "success");
+      } catch (err) {
+        toast(err instanceof Error ? err.message : "Failed to save", "error");
+      }
+    },
+    [updateLlmMut, toast]
   );
 
   const handleDelete = async () => {
@@ -117,8 +158,8 @@ export default function AgentDetailPage() {
       await deleteAgentMut.mutateAsync(agentId);
       toast("Agent deleted", "success");
       router.push(`/retell/${locationId}/agents`);
-    } catch {
-      toast("Failed to delete agent", "error");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Failed to delete agent", "error");
     }
   };
 
@@ -150,6 +191,12 @@ export default function AgentDetailPage() {
       </div>
     );
   }
+
+  const voicemailEnabled = !!agent.voicemail_option;
+  const voicemailActionType = agent.voicemail_option?.action?.type ?? "hangup";
+  const ivrEnabled = !!agent.ivr_option;
+  const callScreeningEnabled = !!agent.call_screening_option;
+  const dtmfOptions = agent.user_dtmf_options ?? null;
 
   return (
     <div className="h-full flex flex-col">
@@ -188,6 +235,20 @@ export default function AgentDetailPage() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => setShowTestCall(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-500 text-white text-[12px] font-medium hover:bg-cyan-600 transition-colors"
+            >
+              <PhoneCall className="w-3.5 h-3.5" />
+              Test Call
+            </button>
+            <button
+              onClick={() => setShowVersions(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-200 text-[12px] font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <History className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Versions & Publish</span>
+            </button>
             <button
               onClick={copyId}
               className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-mono text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
@@ -279,11 +340,7 @@ export default function AgentDetailPage() {
 
           {/* Right: Settings panels */}
           <div className="w-full lg:w-[380px] shrink-0 overflow-y-auto bg-gray-50/50">
-            <SettingsPanel
-              icon={Mic}
-              title="Speech settings"
-              defaultOpen
-            >
+            <SettingsPanel icon={Mic} title="Speech settings" defaultOpen>
               <SliderSetting
                 label="Voice Speed"
                 value={agent.voice_speed ?? 1}
@@ -325,10 +382,72 @@ export default function AgentDetailPage() {
                 onSave={(v) => handleUpdateAgent({ interruption_sensitivity: v })}
               />
               <ToggleSetting
+                label="Dynamic Voice Speed"
+                description="Automatically match the caller's pace"
+                value={agent.enable_dynamic_voice_speed ?? false}
+                onSave={(v) => handleUpdateAgent({ enable_dynamic_voice_speed: v })}
+              />
+              <ToggleSetting
                 label="Backchannel"
                 description="Agent says 'uh-huh', 'yeah' etc."
                 value={agent.enable_backchannel ?? false}
                 onSave={(v) => handleUpdateAgent({ enable_backchannel: v })}
+              />
+              {agent.enable_backchannel && (
+                <TagListSetting
+                  label="Backchannel Words"
+                  value={agent.backchannel_words ?? []}
+                  placeholder="e.g. mm-hmm"
+                  onSave={(v) => handleUpdateAgent({ backchannel_words: v })}
+                />
+              )}
+              <TagListSetting
+                label="Fallback Voices"
+                description="Used automatically if the primary voice provider has an outage"
+                value={agent.fallback_voice_ids ?? []}
+                placeholder="Voice ID"
+                onSave={(v) => handleUpdateAgent({ fallback_voice_ids: v })}
+              />
+            </SettingsPanel>
+
+            <SettingsPanel icon={Radio} title="Realtime transcription">
+              <RadioGroupSetting
+                label="Denoising Mode"
+                value={agent.denoising_mode ?? "noise-cancellation"}
+                options={[
+                  { value: "noise-cancellation", label: "Remove noise" },
+                  {
+                    value: "noise-and-background-speech-cancellation",
+                    label: "Remove noise + background speech",
+                  },
+                  { value: "no-denoising", label: "No denoising" },
+                ]}
+                onSave={(v) => handleUpdateAgent({ denoising_mode: v })}
+              />
+              <RadioGroupSetting
+                label="Transcription Mode"
+                value={agent.stt_mode ?? "fast"}
+                options={[
+                  { value: "fast", label: "Optimize for speed" },
+                  { value: "accurate", label: "Optimize for accuracy" },
+                ]}
+                onSave={(v) => handleUpdateAgent({ stt_mode: v })}
+              />
+              <SelectSetting
+                label="Vocabulary"
+                value={agent.vocab_specialization ?? "general"}
+                options={[
+                  { value: "general", label: "General" },
+                  { value: "medical", label: "Medical" },
+                ]}
+                onSave={(v) => handleUpdateAgent({ vocab_specialization: v })}
+              />
+              <TagListSetting
+                label="Boosted Keywords"
+                description="Bias the transcriber toward these words"
+                value={agent.boosted_keywords ?? []}
+                placeholder="e.g. Acme Corp"
+                onSave={(v) => handleUpdateAgent({ boosted_keywords: v })}
               />
             </SettingsPanel>
 
@@ -339,9 +458,7 @@ export default function AgentDetailPage() {
                 min={1}
                 max={120}
                 step={1}
-                onSave={(v) =>
-                  handleUpdateAgent({ max_call_duration_ms: v * 60000 })
-                }
+                onSave={(v) => handleUpdateAgent({ max_call_duration_ms: v * 60000 })}
               />
               <SliderSetting
                 label="End After Silence (sec)"
@@ -349,9 +466,23 @@ export default function AgentDetailPage() {
                 min={10}
                 max={600}
                 step={10}
-                onSave={(v) =>
-                  handleUpdateAgent({ end_call_after_silence_ms: v * 1000 })
-                }
+                onSave={(v) => handleUpdateAgent({ end_call_after_silence_ms: v * 1000 })}
+              />
+              <SliderSetting
+                label="Ring Duration (sec)"
+                value={(agent.ring_duration_ms ?? 30000) / 1000}
+                min={5}
+                max={300}
+                step={5}
+                onSave={(v) => handleUpdateAgent({ ring_duration_ms: v * 1000 })}
+              />
+              <SliderSetting
+                label="First Message Delay (sec)"
+                value={(agent.begin_message_delay_ms ?? 0) / 1000}
+                min={0}
+                max={5}
+                step={0.5}
+                onSave={(v) => handleUpdateAgent({ begin_message_delay_ms: v * 1000 })}
               />
               <SelectSetting
                 label="Ambient Sound"
@@ -365,15 +496,184 @@ export default function AgentDetailPage() {
                   { value: "static-noise", label: "Static Noise" },
                   { value: "call-center", label: "Call Center" },
                 ]}
+                onSave={(v) => handleUpdateAgent({ ambient_sound: v || null })}
+              />
+              {agent.ambient_sound && (
+                <SliderSetting
+                  label="Ambient Sound Volume"
+                  value={agent.ambient_sound_volume ?? 1}
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  onSave={(v) => handleUpdateAgent({ ambient_sound_volume: v })}
+                />
+              )}
+
+              <ToggleSetting
+                label="DNC Detection"
+                description="Recognize requests to stop calling and mark the contact do-not-call"
+                value={agent.enable_dnc_detection ?? false}
+                onSave={(v) => handleUpdateAgent({ enable_dnc_detection: v })}
+              />
+
+              <ToggleSetting
+                label="Voicemail Detection"
+                description="Hang up or leave a message if voicemail is detected"
+                value={voicemailEnabled}
                 onSave={(v) =>
-                  handleUpdateAgent({ ambient_sound: v || null })
+                  handleUpdateAgent({
+                    voicemail_option: v ? { action: { type: "hangup" } } : null,
+                  })
                 }
               />
+              {voicemailEnabled && (
+                <>
+                  <SelectSetting
+                    label="On Voicemail"
+                    value={voicemailActionType}
+                    options={[
+                      { value: "hangup", label: "Hang up" },
+                      { value: "static_text", label: "Leave a fixed message" },
+                      { value: "prompt", label: "Leave an AI-composed message" },
+                    ]}
+                    onSave={(v) =>
+                      handleUpdateAgent({
+                        voicemail_option: { action: { type: v, text: agent.voicemail_option?.action?.text } },
+                      })
+                    }
+                  />
+                  {voicemailActionType !== "hangup" && (
+                    <TextSetting
+                      label={voicemailActionType === "static_text" ? "Message" : "Instruction"}
+                      value={agent.voicemail_option?.action?.text || ""}
+                      multiline
+                      placeholder={
+                        voicemailActionType === "static_text"
+                          ? "Hey {{user_name}}, sorry we couldn't reach you..."
+                          : "Summarize the call and ask the user to call back"
+                      }
+                      onSave={(v) =>
+                        handleUpdateAgent({
+                          voicemail_option: { action: { type: voicemailActionType, text: v } },
+                        })
+                      }
+                    />
+                  )}
+                </>
+              )}
+
+              <ToggleSetting
+                label="IVR Hangup"
+                description="Hang up automatically if an IVR system is detected"
+                value={ivrEnabled}
+                onSave={(v) =>
+                  handleUpdateAgent({ ivr_option: v ? { action: { type: "hangup" } } : null })
+                }
+              />
+
+              <ToggleSetting
+                label="Call Screen Handling"
+                description="Give the agent an identity and purpose for iOS/Android call screening"
+                value={callScreeningEnabled}
+                onSave={(v) =>
+                  handleUpdateAgent({
+                    call_screening_option: v ? { agent_identity: "", call_purpose: "" } : null,
+                  })
+                }
+              />
+              {callScreeningEnabled && (
+                <>
+                  <TextSetting
+                    label="Agent Identity"
+                    value={agent.call_screening_option?.agent_identity || ""}
+                    placeholder="e.g. Acme Health scheduling team"
+                    onSave={(v) =>
+                      handleUpdateAgent({
+                        call_screening_option: {
+                          ...agent.call_screening_option,
+                          agent_identity: v,
+                        },
+                      })
+                    }
+                  />
+                  <TextSetting
+                    label="Call Purpose"
+                    value={agent.call_screening_option?.call_purpose || ""}
+                    placeholder="e.g. confirming your appointment for tomorrow"
+                    onSave={(v) =>
+                      handleUpdateAgent({
+                        call_screening_option: {
+                          ...agent.call_screening_option,
+                          call_purpose: v,
+                        },
+                      })
+                    }
+                  />
+                </>
+              )}
+
               <ToggleSetting
                 label="Allow User DTMF"
                 description="Let caller press phone keys"
                 value={agent.allow_user_dtmf ?? true}
                 onSave={(v) => handleUpdateAgent({ allow_user_dtmf: v })}
+              />
+              {agent.allow_user_dtmf && (
+                <>
+                  <ToggleSetting
+                    label="DTMF Can Interrupt Agent"
+                    value={agent.allow_dtmf_interruption ?? false}
+                    onSave={(v) => handleUpdateAgent({ allow_dtmf_interruption: v })}
+                  />
+                  <NumberSetting
+                    label="Digit Limit"
+                    description="Respond immediately once this many digits are entered (0 = off)"
+                    value={dtmfOptions?.digit_limit ?? 0}
+                    min={0}
+                    max={20}
+                    onSave={(v) =>
+                      handleUpdateAgent({
+                        user_dtmf_options: { ...dtmfOptions, digit_limit: v || null },
+                      })
+                    }
+                  />
+                  <SelectSetting
+                    label="Termination Key"
+                    value={dtmfOptions?.termination_key ?? ""}
+                    options={[
+                      { value: "", label: "None" },
+                      ...["0","1","2","3","4","5","6","7","8","9","#","*"].map((k) => ({
+                        value: k,
+                        label: k,
+                      })),
+                    ]}
+                    onSave={(v) =>
+                      handleUpdateAgent({
+                        user_dtmf_options: { ...dtmfOptions, termination_key: v || null },
+                      })
+                    }
+                  />
+                  <SliderSetting
+                    label="Keypad Timeout (sec)"
+                    value={(dtmfOptions?.timeout_ms ?? 2500) / 1000}
+                    min={0.5}
+                    max={10}
+                    step={0.5}
+                    onSave={(v) =>
+                      handleUpdateAgent({
+                        user_dtmf_options: { ...dtmfOptions, timeout_ms: v * 1000 },
+                      })
+                    }
+                  />
+                </>
+              )}
+            </SettingsPanel>
+
+            <SettingsPanel icon={Zap} title="Functions">
+              <FunctionsEditor
+                tools={(llm?.general_tools ?? []) as RetellLlmTool[]}
+                isSaving={updateLlmMut.isPending}
+                onSave={(tools) => handleUpdateLlm({ general_tools: tools })}
               />
             </SettingsPanel>
 
@@ -421,36 +721,62 @@ export default function AgentDetailPage() {
               )}
             </SettingsPanel>
 
+            <SettingsPanel icon={Languages} title="Pronunciation">
+              <PronunciationEditor
+                entries={(agent.pronunciation_dictionary ?? []) as PronunciationEntry[]}
+                isSaving={updateAgentMut.isPending}
+                onSave={(entries) => handleUpdateAgent({ pronunciation_dictionary: entries })}
+              />
+            </SettingsPanel>
+
             <SettingsPanel icon={BarChart3} title="Post call extraction">
-              <div className="px-4 py-3">
-                {agent.post_call_analysis_data &&
-                agent.post_call_analysis_data.length > 0 ? (
-                  <div className="space-y-2">
-                    {agent.post_call_analysis_data.map((item, i) => (
-                      <div
-                        key={i}
-                        className="flex items-start gap-2 text-[12px] text-gray-600 bg-gray-50 px-3 py-2 rounded-lg"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
-                        <div>
-                          <p className="font-medium text-gray-700">
-                            {(item as Record<string, string>).name || `Item ${i + 1}`}
-                          </p>
-                          {(item as Record<string, string>).description && (
-                            <p className="text-gray-400 mt-0.5">
-                              {(item as Record<string, string>).description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[12px] text-gray-400 text-center py-4">
-                    No post-call analysis configured
-                  </p>
-                )}
-              </div>
+              <PostCallAnalysisEditor
+                items={(agent.post_call_analysis_data ?? []) as PostCallAnalysisItem[]}
+                isSaving={updateAgentMut.isPending}
+                onSave={(items) => handleUpdateAgent({ post_call_analysis_data: items })}
+              />
+            </SettingsPanel>
+
+            <SettingsPanel icon={Webhook} title="Webhook">
+              <TextSetting
+                label="Webhook URL"
+                value={agent.webhook_url || ""}
+                placeholder="https://your-server.com/webhook"
+                onSave={(v) => handleUpdateAgent({ webhook_url: v || null })}
+              />
+              <TagListSetting
+                label="Events"
+                description="e.g. call_started, call_ended, call_analyzed"
+                value={agent.webhook_events ?? []}
+                placeholder="call_ended"
+                onSave={(v) => handleUpdateAgent({ webhook_events: v })}
+              />
+            </SettingsPanel>
+
+            <SettingsPanel icon={Database} title="Data & privacy">
+              <SelectSetting
+                label="Data Storage"
+                value={agent.data_storage_setting ?? "everything"}
+                options={[
+                  { value: "everything", label: "Everything" },
+                  { value: "everything_except_pii", label: "Everything except PII" },
+                  { value: "basic_attributes_only", label: "Basic attributes only" },
+                ]}
+                onSave={(v) => handleUpdateAgent({ data_storage_setting: v })}
+              />
+              <NumberSetting
+                label="Retention (days)"
+                value={agent.data_storage_retention_days ?? 730}
+                min={1}
+                max={730}
+                onSave={(v) => handleUpdateAgent({ data_storage_retention_days: v })}
+              />
+              <ToggleSetting
+                label="Signed URLs"
+                description="Require signed URLs for recordings and logs"
+                value={agent.opt_in_signed_url ?? false}
+                onSave={(v) => handleUpdateAgent({ opt_in_signed_url: v })}
+              />
             </SettingsPanel>
 
             <SettingsPanel icon={Settings2} title="General">
@@ -469,14 +795,6 @@ export default function AgentDetailPage() {
                     </p>
                   </div>
                 )}
-                <div>
-                  <p className="text-[12px] text-gray-500 mb-1">
-                    Data Storage
-                  </p>
-                  <p className="text-[12px] text-gray-700 capitalize">
-                    {(agent as Record<string, unknown>).data_storage_setting as string || "everything"}
-                  </p>
-                </div>
               </div>
             </SettingsPanel>
 
@@ -491,169 +809,24 @@ export default function AgentDetailPage() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function SettingsPanel({
-  icon: Icon,
-  title,
-  defaultOpen = false,
-  children,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-
-  return (
-    <div className="border-b border-gray-200 bg-white">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50/50 transition-colors"
-      >
-        <Icon className="w-4 h-4 text-gray-400 shrink-0" />
-        <span className="text-[13px] font-medium text-gray-700 flex-1">
-          {title}
-        </span>
-        <ChevronDown
-          className={cn(
-            "w-4 h-4 text-gray-400 transition-transform",
-            open && "rotate-180"
-          )}
+      {showTestCall && (
+        <TestCallPanel
+          agentId={agentId}
+          agentName={agent.agent_name || ""}
+          locationId={locationId}
+          onClose={() => setShowTestCall(false)}
         />
-      </button>
-      {open && <div className="border-t border-gray-100">{children}</div>}
-    </div>
-  );
-}
+      )}
 
-function SliderSetting({
-  label,
-  value,
-  min,
-  max,
-  step,
-  onSave,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onSave: (v: number) => void;
-}) {
-  const [local, setLocal] = useState(value);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    setLocal(value);
-    setDirty(false);
-  }, [value]);
-
-  return (
-    <div className="px-4 py-3 border-t border-gray-50 first:border-0">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[12px] text-gray-600">{label}</span>
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] font-mono text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded min-w-[36px] text-center">
-            {Number.isInteger(step * 10) && step < 1
-              ? local.toFixed(1)
-              : Math.round(local)}
-          </span>
-          {dirty && (
-            <button
-              onClick={() => {
-                onSave(local);
-                setDirty(false);
-              }}
-              className="text-[10px] font-medium text-cyan-600 hover:text-cyan-700"
-            >
-              Save
-            </button>
-          )}
-        </div>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={local}
-        onChange={(e) => {
-          setLocal(parseFloat(e.target.value));
-          setDirty(true);
-        }}
-        className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 accent-cyan-500"
-      />
-    </div>
-  );
-}
-
-function ToggleSetting({
-  label,
-  description,
-  value,
-  onSave,
-}: {
-  label: string;
-  description?: string;
-  value: boolean;
-  onSave: (v: boolean) => void;
-}) {
-  return (
-    <div className="px-4 py-3 border-t border-gray-50 first:border-0 flex items-center justify-between gap-3">
-      <div>
-        <p className="text-[12px] text-gray-600">{label}</p>
-        {description && (
-          <p className="text-[11px] text-gray-400 mt-0.5">{description}</p>
-        )}
-      </div>
-      <button
-        onClick={() => onSave(!value)}
-        className={cn(
-          "relative w-9 h-5 rounded-full transition-colors shrink-0",
-          value ? "bg-cyan-500" : "bg-gray-300"
-        )}
-      >
-        <span
-          className={cn(
-            "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform",
-            value ? "left-[18px]" : "left-0.5"
-          )}
+      {showVersions && (
+        <VersionHistoryPanel
+          agentId={agentId}
+          locationId={locationId}
+          currentVersion={agent.version}
+          onClose={() => setShowVersions(false)}
         />
-      </button>
-    </div>
-  );
-}
-
-function SelectSetting({
-  label,
-  value,
-  options,
-  onSave,
-}: {
-  label: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onSave: (v: string) => void;
-}) {
-  return (
-    <div className="px-4 py-3 border-t border-gray-50 first:border-0">
-      <p className="text-[12px] text-gray-600 mb-1.5">{label}</p>
-      <select
-        value={value}
-        onChange={(e) => onSave(e.target.value)}
-        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      )}
     </div>
   );
 }

@@ -5,6 +5,63 @@ export interface RetellResponseEngine {
   version?: number;
 }
 
+export type PronunciationAlphabet = "ipa" | "cmu";
+
+export interface PronunciationEntry {
+  word: string;
+  alphabet: PronunciationAlphabet;
+  phoneme: string;
+}
+
+export type VoicemailActionType = "hangup" | "static_text" | "prompt";
+
+export interface VoicemailOption {
+  action: {
+    type: VoicemailActionType;
+    text?: string;
+  };
+}
+
+export interface IvrOption {
+  action: {
+    type: "hangup";
+  };
+}
+
+export interface CallScreeningOption {
+  agent_identity?: string;
+  call_purpose?: string;
+}
+
+export interface UserDtmfOptions {
+  digit_limit?: number | null;
+  termination_key?: string | null;
+  timeout_ms?: number | null;
+}
+
+export type DenoisingMode =
+  | "noise-cancellation"
+  | "noise-and-background-speech-cancellation"
+  | "no-denoising";
+
+export type SttMode = "fast" | "accurate" | "custom";
+
+export type VocabSpecialization = "general" | "medical";
+
+export type PostCallAnalysisFieldType =
+  | "string"
+  | "boolean"
+  | "number"
+  | "enum";
+
+export interface PostCallAnalysisItem {
+  type: PostCallAnalysisFieldType;
+  name: string;
+  description: string;
+  examples?: string[];
+  choices?: string[];
+}
+
 export interface RetellAgent {
   agent_id: string;
   agent_name: string | null;
@@ -22,6 +79,8 @@ export interface RetellAgent {
   enable_dynamic_voice_speed: boolean;
   enable_dynamic_responsiveness: boolean;
   enable_expressive_mode: boolean;
+  expressive_emotion_tags?: string[];
+  expressive_mode_prompt?: string | null;
   responsiveness: number;
   interruption_sensitivity: number;
   enable_backchannel: boolean;
@@ -32,12 +91,25 @@ export interface RetellAgent {
   ambient_sound: string | null;
   ambient_sound_volume: number;
   language: string | null;
+  timezone?: string | null;
   channel?: "voice" | "phone" | "web" | string;
   webhook_url: string | null;
   webhook_events: string[];
+  webhook_timeout_ms?: number;
   boosted_keywords: string[];
+  pronunciation_dictionary?: PronunciationEntry[];
+  vocab_specialization?: VocabSpecialization;
+  stt_mode?: SttMode;
+  denoising_mode?: DenoisingMode;
   enable_dnc_detection: boolean;
   allow_user_dtmf?: boolean;
+  allow_dtmf_interruption?: boolean;
+  user_dtmf_options?: UserDtmfOptions | null;
+  voicemail_option?: VoicemailOption | null;
+  ivr_option?: IvrOption | null;
+  call_screening_option?: CallScreeningOption | null;
+  begin_message_delay_ms?: number;
+  ring_duration_ms?: number;
   contact_memory_config?: {
     enabled?: boolean;
     enable_read?: boolean;
@@ -46,7 +118,11 @@ export interface RetellAgent {
   };
   end_call_after_silence_ms: number;
   max_call_duration_ms: number;
-  post_call_analysis_data: Record<string, unknown>[];
+  post_call_analysis_data: PostCallAnalysisItem[];
+  post_call_analysis_model?: string | null;
+  data_storage_setting?: "everything" | "everything_except_pii" | "basic_attributes_only";
+  data_storage_retention_days?: number | null;
+  opt_in_signed_url?: boolean;
   last_modification_timestamp: number;
   [key: string]: unknown;
 }
@@ -72,19 +148,65 @@ export interface CreateAgentPayload {
 
 export type UpdateAgentPayload = Partial<CreateAgentPayload>;
 
+export const BUILTIN_TOOL_TYPES = [
+  "custom",
+  "end_call",
+  "transfer_call",
+  "press_digit",
+  "send_sms",
+  "extract_dynamic_variable",
+] as const;
+
+export type BuiltinToolType = (typeof BUILTIN_TOOL_TYPES)[number];
+
+/** Covers the common tool types with structured fields; anything else from
+ * Retell's wider tool catalog (agent_swap, code, mcp, integration_app, ...)
+ * still round-trips through the generic fields below via raw JSON editing. */
 export interface RetellLlmTool {
-  type: string;
+  type: BuiltinToolType | (string & {});
   name: string;
-  description: string;
+  description?: string;
+  // custom (webhook function)
+  url?: string;
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  headers?: Record<string, string>;
+  query_params?: Record<string, string>;
   parameters?: {
     type: string;
     properties?: Record<string, unknown>;
     required?: string[];
   };
-  url?: string;
+  response_variables?: Record<string, string>;
+  timeout_ms?: number;
+  // press_digit
+  delay_ms?: number;
+  // send_sms
+  sms_content?: {
+    type: "predefined" | "inferred";
+    predefined_content?: string;
+  };
+  // transfer_call
+  transfer_destination?: {
+    type: "predefined" | "inferred";
+    number?: string;
+    prompt?: string;
+  };
+  transfer_option?: {
+    type: "cold_transfer" | "warm_transfer";
+  };
+  // extract_dynamic_variable
+  variables?: {
+    type: PostCallAnalysisFieldType;
+    name: string;
+    description: string;
+    choices?: string[];
+  }[];
+  // shared execution-message fields
   speak_during_execution?: boolean;
   speak_after_execution?: boolean;
   execution_message_description?: string;
+  execution_message_type?: "prompt" | "static_text";
+  [key: string]: unknown;
 }
 
 export interface RetellLlm {
@@ -121,4 +243,59 @@ export interface ListVersionsResponse {
   has_more: boolean;
   pagination_key: string | null;
   items: AgentVersion[];
+}
+
+export interface CreateWebCallResponse {
+  call_id: string;
+  access_token: string;
+  expires_at?: number;
+}
+
+export type KnowledgeBaseStatus =
+  | "in_progress"
+  | "complete"
+  | "error"
+  | "refreshing_in_progress";
+
+export interface KnowledgeBaseSourceDocument {
+  type: "document";
+  source_id: string;
+  filename: string;
+  file_url: string;
+  file_size?: number;
+}
+
+export interface KnowledgeBaseSourceText {
+  type: "text";
+  source_id: string;
+  title: string;
+  content_url?: string;
+}
+
+export interface KnowledgeBaseSourceUrl {
+  type: "url";
+  source_id: string;
+  url: string;
+}
+
+export type KnowledgeBaseSource =
+  | KnowledgeBaseSourceDocument
+  | KnowledgeBaseSourceText
+  | KnowledgeBaseSourceUrl;
+
+export interface KnowledgeBase {
+  knowledge_base_id: string;
+  knowledge_base_name: string;
+  status: KnowledgeBaseStatus;
+  max_chunk_size: number;
+  min_chunk_size: number;
+  knowledge_base_sources: KnowledgeBaseSource[];
+  enable_auto_refresh: boolean;
+  last_refreshed_timestamp?: number;
+  [key: string]: unknown;
+}
+
+export interface KnowledgeBaseTextInput {
+  title: string;
+  text: string;
 }
