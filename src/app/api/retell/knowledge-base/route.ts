@@ -68,6 +68,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const hasSource =
+      incoming.has("knowledge_base_files") ||
+      incoming.has("knowledge_base_texts") ||
+      incoming.has("knowledge_base_urls");
+    if (!hasSource) {
+      return NextResponse.json(
+        {
+          error:
+            "Add at least one file, text entry, or URL — Retell requires a knowledge base to have a starting source",
+        },
+        { status: 400 }
+      );
+    }
+
     // Forward everything except our internal locationId field to Retell.
     const forward = new FormData();
     for (const [key, value] of incoming.entries()) {

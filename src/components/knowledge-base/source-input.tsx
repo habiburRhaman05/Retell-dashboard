@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { KnowledgeBaseTextInput } from "@/types/retell";
 import { FileText, Link2, Type, X, Upload } from "lucide-react";
@@ -16,13 +16,17 @@ export interface SourceInputValue {
   urls: string[];
 }
 
-export function SourceInputPanel({
-  value,
-  onChange,
-}: {
+/** Lets a parent force any text/URL the user typed but hadn't clicked
+ * "Add" on yet into `value` right before submitting — otherwise a filled
+ * form with an un-clicked Add button silently submits as zero sources. */
+export interface SourceInputPanelHandle {
+  commitPending: () => SourceInputValue;
+}
+
+export const SourceInputPanel = forwardRef<SourceInputPanelHandle, {
   value: SourceInputValue;
   onChange: (value: SourceInputValue) => void;
-}) {
+}>(function SourceInputPanel({ value, onChange }, ref) {
   const [tab, setTab] = useState<SourceTab>("files");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -97,6 +101,35 @@ export function SourceInputPanel({
   const removeUrl = (index: number) => {
     onChange({ ...value, urls: value.urls.filter((_, i) => i !== index) });
   };
+
+  useImperativeHandle(ref, () => ({
+    commitPending: () => {
+      let next = value;
+
+      if (textTitle.trim() && textBody.trim()) {
+        next = {
+          ...next,
+          texts: [...next.texts, { title: textTitle.trim(), text: textBody.trim() }],
+        };
+        setTextTitle("");
+        setTextBody("");
+      }
+
+      const trimmedUrl = urlInput.trim();
+      if (trimmedUrl) {
+        try {
+          new URL(trimmedUrl);
+          next = { ...next, urls: [...next.urls, trimmedUrl] };
+          setUrlInput("");
+        } catch {
+          setUrlError("Enter a valid URL, e.g. https://example.com");
+        }
+      }
+
+      if (next !== value) onChange(next);
+      return next;
+    },
+  }));
 
   const totalSources = value.files.length + value.texts.length + value.urls.length;
 
@@ -284,4 +317,4 @@ export function SourceInputPanel({
       )}
     </div>
   );
-}
+});

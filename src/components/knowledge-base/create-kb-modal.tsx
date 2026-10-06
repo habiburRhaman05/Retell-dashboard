@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { useCreateKnowledgeBase } from "@/hooks/use-knowledge-bases";
 import { useToast } from "@/components/layout/toast";
-import { SourceInputPanel, type SourceInputValue } from "./source-input";
+import {
+  SourceInputPanel,
+  type SourceInputValue,
+  type SourceInputPanelHandle,
+} from "./source-input";
 
 export function CreateKnowledgeBaseModal({
   locationId,
@@ -23,6 +27,8 @@ export function CreateKnowledgeBaseModal({
     texts: [],
     urls: [],
   });
+  const [sourceError, setSourceError] = useState<string | null>(null);
+  const sourcePanelRef = useRef<SourceInputPanelHandle>(null);
   const createKb = useCreateKnowledgeBase(locationId);
   const { toast } = useToast();
 
@@ -40,12 +46,24 @@ export function CreateKnowledgeBaseModal({
     }
     setNameError(null);
 
+    // Pick up anything typed into the Text/URL tab that wasn't explicitly
+    // "Added" yet — otherwise it silently vanishes on submit.
+    const committed = sourcePanelRef.current?.commitPending() ?? sources;
+    const committedTotal = committed.files.length + committed.texts.length + committed.urls.length;
+    if (committedTotal === 0) {
+      setSourceError(
+        "Add at least one file, text entry, or URL — Retell requires a knowledge base to have a starting source"
+      );
+      return;
+    }
+    setSourceError(null);
+
     try {
       const kb = await createKb.mutateAsync({
         name: trimmedName,
-        texts: sources.texts,
-        urls: sources.urls,
-        files: sources.files,
+        texts: committed.texts,
+        urls: committed.urls,
+        files: committed.files,
         enableAutoRefresh: autoRefresh,
       });
       toast("Knowledge base created", "success");
@@ -100,9 +118,12 @@ export function CreateKnowledgeBaseModal({
 
           <div className="mb-2">
             <label className="block text-[13px] font-medium text-gray-700 mb-2">
-              Sources (optional, add later too)
+              Sources <span className="text-red-400">*</span>
             </label>
-            <SourceInputPanel value={sources} onChange={setSources} />
+            <SourceInputPanel ref={sourcePanelRef} value={sources} onChange={setSources} />
+            {sourceError && (
+              <p className="text-xs text-red-500 mt-2">{sourceError}</p>
+            )}
           </div>
 
           <label className="flex items-center gap-2.5 mt-4 cursor-pointer select-none">

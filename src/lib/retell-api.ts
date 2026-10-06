@@ -6,6 +6,8 @@ import type {
   ListVersionsResponse,
   KnowledgeBase,
   CreateWebCallResponse,
+  ListCallsRequest,
+  ListCallsResponse,
 } from "@/types/retell";
 
 const RETELL_BASE_URL = "https://api.retellai.com";
@@ -150,6 +152,15 @@ export async function createWebCall(
   return retellFetch<CreateWebCallResponse>("/v3/create-web-call", {
     method: "POST",
     body: JSON.stringify({ agent_id: agentId }),
+  });
+}
+
+export async function listCalls(
+  body: ListCallsRequest
+): Promise<ListCallsResponse> {
+  return retellFetch<ListCallsResponse>("/v3/list-calls", {
+    method: "POST",
+    body: JSON.stringify(body),
   });
 }
 

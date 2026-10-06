@@ -251,6 +251,85 @@ export interface CreateWebCallResponse {
   expires_at?: number;
 }
 
+export type CallStatus = "registered" | "not_connected" | "ongoing" | "ended" | "error";
+export type CallDirection = "inbound" | "outbound";
+export type CallType = "web_call" | "phone_call";
+export type UserSentiment = "Negative" | "Positive" | "Neutral" | "Unknown";
+
+export interface CallLatencyStat {
+  p50?: number;
+  p90?: number;
+  p95?: number;
+  p99?: number;
+  max?: number;
+  min?: number;
+  num?: number;
+}
+
+export interface CallAnalysis {
+  call_summary?: string;
+  in_voicemail?: boolean;
+  user_sentiment?: UserSentiment;
+  call_successful?: boolean;
+  custom_analysis_data?: Record<string, unknown>;
+}
+
+export interface RetellCall {
+  call_id: string;
+  agent_id: string;
+  agent_name?: string;
+  call_status: CallStatus;
+  call_type: CallType;
+  direction?: CallDirection;
+  start_timestamp?: number;
+  end_timestamp?: number;
+  duration_ms?: number;
+  disconnection_reason?: string;
+  call_analysis?: CallAnalysis;
+  latency?: {
+    e2e?: CallLatencyStat;
+    [key: string]: CallLatencyStat | undefined;
+  };
+  [key: string]: unknown;
+}
+
+export interface RangeFilter {
+  type: "range";
+  op?: "bt";
+  value: [number, number];
+}
+
+export interface ListCallsFilterCriteria {
+  agent?: { agent_id: string }[];
+  start_timestamp?: RangeFilter;
+}
+
+export interface ListCallsRequest {
+  filter_criteria?: ListCallsFilterCriteria;
+  sort_order?: "ascending" | "descending";
+  limit?: number;
+  pagination_key?: string;
+}
+
+export interface ListCallsResponse {
+  has_more: boolean;
+  pagination_key: string | null;
+  items: RetellCall[];
+}
+
+export interface AnalyticsSummary {
+  totalCalls: number;
+  avgDurationMs: number | null;
+  avgLatencyMs: number | null;
+  callsByDay: { date: string; count: number }[];
+  concurrencyByDay: { date: string; maxConcurrent: number }[];
+  callSuccessful: { successful: number; unsuccessful: number; pending: number };
+  disconnectionReason: { reason: string; count: number }[];
+  userSentiment: { sentiment: string; count: number }[];
+  phoneDirection: { inbound: number; outbound: number };
+  truncated: boolean;
+}
+
 export type KnowledgeBaseStatus =
   | "in_progress"
   | "complete"
@@ -287,11 +366,16 @@ export interface KnowledgeBase {
   knowledge_base_id: string;
   knowledge_base_name: string;
   status: KnowledgeBaseStatus;
-  max_chunk_size: number;
-  min_chunk_size: number;
-  knowledge_base_sources: KnowledgeBaseSource[];
+  // Only present in the response when explicitly set on create — Retell
+  // does not echo back its own defaults.
+  max_chunk_size?: number;
+  min_chunk_size?: number;
+  knowledge_base_sources?: KnowledgeBaseSource[];
   enable_auto_refresh: boolean;
   last_refreshed_timestamp?: number;
+  user_modified_timestamp?: number;
+  auto_crawling_paths?: string[];
+  error_messages?: string[];
   [key: string]: unknown;
 }
 

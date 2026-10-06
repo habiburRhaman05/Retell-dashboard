@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/knowledge-base/kb-card";
 import {
   SourceInputPanel,
   type SourceInputValue,
+  type SourceInputPanelHandle,
 } from "@/components/knowledge-base/source-input";
 import {
   ArrowLeft,
@@ -28,7 +29,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { KnowledgeBaseSource } from "@/types/retell";
 
@@ -50,6 +51,7 @@ export default function KnowledgeBaseDetailPage() {
     texts: [],
     urls: [],
   });
+  const sourcePanelRef = useRef<SourceInputPanelHandle>(null);
   const [deletingSourceId, setDeletingSourceId] = useState<string | null>(null);
 
   const handleDeleteKb = async () => {
@@ -72,13 +74,16 @@ export default function KnowledgeBaseDetailPage() {
   };
 
   const handleAddSources = async () => {
-    const total = newSources.files.length + newSources.texts.length + newSources.urls.length;
+    // Pick up anything typed into the Text/URL tab that wasn't explicitly
+    // "Added" yet — otherwise it silently vanishes on submit.
+    const committed = sourcePanelRef.current?.commitPending() ?? newSources;
+    const total = committed.files.length + committed.texts.length + committed.urls.length;
     if (total === 0) {
       toast("Add at least one file, text entry, or URL", "error");
       return;
     }
     try {
-      await addSourcesMut.mutateAsync(newSources);
+      await addSourcesMut.mutateAsync(committed);
       toast("Sources added — processing may take a moment", "success");
       setNewSources({ files: [], texts: [], urls: [] });
       setShowAddPanel(false);
@@ -180,7 +185,7 @@ export default function KnowledgeBaseDetailPage() {
           <span className="shrink-0">{sources.length} source{sources.length !== 1 ? "s" : ""}</span>
           <span className="text-gray-300">|</span>
           <span className="shrink-0">
-            Chunk size: {kb.min_chunk_size}–{kb.max_chunk_size} chars
+            Chunk size: {kb.min_chunk_size ?? 400}–{kb.max_chunk_size ?? 2000} chars
           </span>
           {kb.enable_auto_refresh && (
             <>
@@ -244,7 +249,7 @@ export default function KnowledgeBaseDetailPage() {
 
             {showAddPanel && (
               <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
-                <SourceInputPanel value={newSources} onChange={setNewSources} />
+                <SourceInputPanel ref={sourcePanelRef} value={newSources} onChange={setNewSources} />
                 <div className="flex justify-end mt-3">
                   <button
                     onClick={handleAddSources}
