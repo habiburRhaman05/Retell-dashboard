@@ -203,7 +203,7 @@ export default function AgentDetailPage() {
     <div className="h-full flex flex-col">
       {/* Top bar */}
       <div className="bg-white border-b border-gray-200 px-4 lg:px-6">
-        <div className="max-w-[1400px] mx-auto flex items-center h-[52px] gap-4">
+        <div className="max-w-[1800px] mx-auto flex items-center h-[52px] gap-4">
           <Link
             href={`/retell/${locationId}/agents`}
             className="p-1.5 rounded-md hover:bg-gray-100 transition-colors shrink-0"
@@ -269,7 +269,7 @@ export default function AgentDetailPage() {
 
       {/* Info bar */}
       <div className="bg-gray-50 border-b border-gray-200 px-4 lg:px-6">
-        <div className="max-w-[1400px] mx-auto flex items-center h-[40px] gap-6 text-[12px] text-gray-500 overflow-x-auto">
+        <div className="max-w-[1800px] mx-auto flex items-center h-[40px] gap-6 text-[12px] text-gray-500 overflow-x-auto">
           <span className="shrink-0">{llm?.model || "—"}</span>
           <span className="text-gray-300">|</span>
           <span className="shrink-0 inline-flex items-center gap-1">
@@ -285,7 +285,7 @@ export default function AgentDetailPage() {
 
       {/* Main content */}
       <div className="flex-1 overflow-hidden">
-        <div className="max-w-[1400px] mx-auto h-full flex flex-col lg:flex-row">
+        <div className="max-w-[1800px] mx-auto h-full flex flex-col lg:flex-row">
           {/* Left: Prompt editor */}
           <div className="flex-1 flex flex-col border-r border-gray-200 min-w-0">
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-white">

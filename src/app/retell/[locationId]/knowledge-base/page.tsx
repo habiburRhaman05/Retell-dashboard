@@ -72,7 +72,7 @@ export default function KnowledgeBasePage() {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 lg:px-6 py-6">
+    <div className="max-w-[1800px] mx-auto px-4 lg:px-6 py-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">Knowledge Bases</h1>

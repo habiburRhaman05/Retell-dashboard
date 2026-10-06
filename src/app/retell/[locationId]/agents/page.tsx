@@ -251,7 +251,7 @@ export default function AgentsPage() {
 
   const filteredAgents = useMemo(() => {
     if (!agents) return [];
-    let result = agents.filter(
+    const result = agents.filter(
       (a) =>
         !search ||
         (a.agent_name || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -282,7 +282,7 @@ export default function AgentsPage() {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 lg:px-6 py-6">
+    <div className="max-w-[1800px] mx-auto px-4 lg:px-6 py-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">Voice Agents</h1>

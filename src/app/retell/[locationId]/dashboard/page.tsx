@@ -52,7 +52,7 @@ export default function OverviewPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1400px] mx-auto px-4 lg:px-6 py-6">
+      <div className="max-w-[1800px] mx-auto px-4 lg:px-6 py-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse">
@@ -70,7 +70,7 @@ export default function OverviewPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 lg:px-6 py-6">
+    <div className="max-w-[1800px] mx-auto px-4 lg:px-6 py-6">
       <div className="mb-6">
         <h1 className="text-lg font-semibold text-gray-900">Overview</h1>
         <p className="text-[13px] text-gray-500 mt-0.5">

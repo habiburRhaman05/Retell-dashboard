@@ -45,7 +45,7 @@ export function TopNavbar() {
   return (
     <>
       <header className="bg-white border-b border-gray-200 shrink-0">
-        <div className="max-w-[1400px] mx-auto px-4 lg:px-6">
+        <div className="max-w-[1800px] mx-auto px-4 lg:px-6">
           <div className="flex items-center h-[60px]">
             <nav className="hidden md:flex items-center gap-1">
               {NAV_LINKS.map((link) => {
