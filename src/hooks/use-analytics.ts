@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsSummary } from "@/types/retell";
+import type { FullAnalyticsResponse } from "@/types/retell";
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -20,10 +20,10 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 export function useAnalytics(locationId: string, start: number, end: number) {
-  return useQuery<AnalyticsSummary>({
+  return useQuery<FullAnalyticsResponse>({
     queryKey: ["analytics", locationId, start, end],
     queryFn: () =>
-      fetchJson<AnalyticsSummary>(
+      fetchJson<FullAnalyticsResponse>(
         `/api/retell/analytics?locationId=${encodeURIComponent(locationId)}&start=${start}&end=${end}`
       ),
     enabled: !!locationId,

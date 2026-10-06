@@ -274,6 +274,26 @@ export interface CallAnalysis {
   custom_analysis_data?: Record<string, unknown>;
 }
 
+export interface LlmTokenUsage {
+  values?: number[];
+  average?: number;
+  num_requests?: number;
+}
+
+export interface CallCostProductItem {
+  product: string;
+  unit_price?: number;
+  cost: number;
+  is_transfer_leg_cost?: boolean;
+}
+
+export interface CallCost {
+  product_costs?: CallCostProductItem[];
+  total_duration_seconds?: number;
+  total_duration_unit_price?: number;
+  combined_cost: number;
+}
+
 export interface RetellCall {
   call_id: string;
   agent_id: string;
@@ -288,8 +308,16 @@ export interface RetellCall {
   call_analysis?: CallAnalysis;
   latency?: {
     e2e?: CallLatencyStat;
+    asr?: CallLatencyStat;
+    llm?: CallLatencyStat;
+    llm_websocket_network_rtt?: CallLatencyStat;
+    tts?: CallLatencyStat;
+    knowledge_base?: CallLatencyStat;
+    s2s?: CallLatencyStat;
     [key: string]: CallLatencyStat | undefined;
   };
+  llm_token_usage?: LlmTokenUsage;
+  call_cost?: CallCost;
   [key: string]: unknown;
 }
 
@@ -328,6 +356,47 @@ export interface AnalyticsSummary {
   userSentiment: { sentiment: string; count: number }[];
   phoneDirection: { inbound: number; outbound: number };
   truncated: boolean;
+}
+
+export interface LatencyStageSummary {
+  stage: string;
+  avgMs: number;
+  sampleCount: number;
+}
+
+export interface UsageBreakdownItem {
+  label: string;
+  count: number;
+}
+
+export interface AgentBreakdownItem {
+  agentId: string;
+  agentName: string;
+  totalCalls: number;
+  successRate: number | null;
+  avgDurationMs: number | null;
+}
+
+export interface VoiceAiAnalyticsSummary {
+  latencyByStage: LatencyStageSummary[];
+  tokenUsage: {
+    avgTokensPerCall: number | null;
+    totalTokens: number;
+    sampleCount: number;
+  };
+  cost: {
+    totalCostCents: number;
+    avgCostCentsPerCall: number | null;
+    costByDay: { date: string; costCents: number }[];
+  };
+  agentBreakdown: AgentBreakdownItem[];
+  voiceBreakdown: UsageBreakdownItem[];
+  modelBreakdown: UsageBreakdownItem[];
+}
+
+export interface FullAnalyticsResponse {
+  callAnalytics: AnalyticsSummary;
+  voiceAiAnalytics: VoiceAiAnalyticsSummary;
 }
 
 export type KnowledgeBaseStatus =
