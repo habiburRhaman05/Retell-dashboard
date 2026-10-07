@@ -62,7 +62,7 @@ export function AgentForm({
   const volume = watch("volume");
 
   const inputClass =
-    "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all";
+    "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all";
   const inputErrorClass =
     "w-full px-3.5 py-2.5 rounded-lg border border-red-300 text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all";
 
@@ -143,7 +143,7 @@ export function AgentForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-cyan-500 text-white text-[13px] font-medium hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm shadow-cyan-500/20"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-500 text-white text-[13px] font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm shadow-brand-500/20"
         >
           {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
           {mode === "create" ? "Create Agent" : "Save Changes"}
@@ -223,7 +223,7 @@ function SliderField({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 accent-cyan-500"
+        className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 accent-brand-500"
       />
       <div className="flex justify-between mt-1">
         <span className="text-[10px] text-gray-400">{min}</span>

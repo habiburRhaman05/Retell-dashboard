@@ -16,7 +16,7 @@ import {
 import { useState, useRef, useEffect } from "react";
 
 const ACCENT_COLORS = [
-  "from-cyan-400 to-blue-500",
+  "from-brand-400 to-blue-500",
   "from-violet-400 to-purple-500",
   "from-emerald-400 to-teal-500",
   "from-amber-400 to-orange-500",
@@ -163,7 +163,7 @@ export function KnowledgeBaseCard({
 
         <div className="flex items-center justify-between pt-3.5 border-t border-gray-100">
           <StatusBadge status={kb.status} />
-          <span className="text-xs text-cyan-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
+          <span className="text-xs text-brand-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
             View Details <ExternalLink className="w-3 h-3" />
           </span>
         </div>

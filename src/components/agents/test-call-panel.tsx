@@ -141,8 +141,8 @@ export function TestCallPanel({
         <div className="flex-1 overflow-y-auto px-5 py-4 min-h-[200px]">
           {status === "idle" && (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="w-14 h-14 rounded-full bg-cyan-50 flex items-center justify-center mb-4">
-                <Mic className="w-6 h-6 text-cyan-500" />
+              <div className="w-14 h-14 rounded-full bg-brand-50 flex items-center justify-center mb-4">
+                <Mic className="w-6 h-6 text-brand-500" />
               </div>
               <p className="text-sm text-gray-600 mb-1">Talk to this agent right in your browser</p>
               <p className="text-xs text-gray-400">
@@ -153,7 +153,7 @@ export function TestCallPanel({
 
           {status === "connecting" && (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <Loader2 className="w-6 h-6 text-cyan-500 animate-spin mb-3" />
+              <Loader2 className="w-6 h-6 text-brand-500 animate-spin mb-3" />
               <p className="text-sm text-gray-500">Connecting...</p>
             </div>
           )}
@@ -175,7 +175,7 @@ export function TestCallPanel({
                   <span
                     className={cn(
                       "w-2.5 h-2.5 rounded-full",
-                      agentTalking ? "bg-cyan-500 animate-pulse" : "bg-gray-300"
+                      agentTalking ? "bg-brand-500 animate-pulse" : "bg-gray-300"
                     )}
                   />
                   <span className="text-xs text-gray-500">
@@ -205,7 +205,7 @@ export function TestCallPanel({
                           "max-w-[80%] px-3 py-2 rounded-lg text-[13px] leading-relaxed",
                           line.role === "agent"
                             ? "bg-gray-100 text-gray-800"
-                            : "bg-cyan-500 text-white"
+                            : "bg-brand-500 text-white"
                         )}
                       >
                         {line.content}
@@ -236,7 +236,7 @@ export function TestCallPanel({
             <button
               onClick={startCall}
               disabled={status === "connecting"}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-cyan-500 text-white text-sm font-medium hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {status === "connecting" ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

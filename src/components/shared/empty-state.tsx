@@ -30,7 +30,7 @@ export function EmptyState({
       {actionLabel && actionHref && (
         <Link
           href={actionHref}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-cyan-500 text-white text-[13px] font-medium hover:bg-cyan-600 transition-colors shadow-sm shadow-cyan-500/20"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-brand-500 text-white text-[13px] font-medium hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/20"
         >
           <Plus className="w-3.5 h-3.5" />
           {actionLabel}
@@ -39,7 +39,7 @@ export function EmptyState({
       {actionLabel && onAction && !actionHref && (
         <button
           onClick={onAction}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-cyan-500 text-white text-[13px] font-medium hover:bg-cyan-600 transition-colors shadow-sm shadow-cyan-500/20"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-brand-500 text-white text-[13px] font-medium hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/20"
         >
           <Download className="w-3.5 h-3.5" />
           {actionLabel}

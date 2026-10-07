@@ -55,7 +55,7 @@ export default function AnalyticsPage() {
             className={cn(
               "inline-flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors",
               tab === t.id
-                ? "border-cyan-500 text-cyan-600"
+                ? "border-brand-500 text-brand-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             )}
           >

@@ -81,12 +81,12 @@ export function PronunciationEditor({
               setWord(e.target.value);
               setError(null);
             }}
-            className="flex-1 min-w-0 px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+            className="flex-1 min-w-0 px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
           />
           <select
             value={alphabet}
             onChange={(e) => setAlphabet(e.target.value as "ipa" | "cmu")}
-            className="px-2 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 shrink-0"
+            className="px-2 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 shrink-0"
           >
             <option value="ipa">IPA</option>
             <option value="cmu">CMU</option>
@@ -100,7 +100,7 @@ export function PronunciationEditor({
             setPhoneme(e.target.value);
             setError(null);
           }}
-          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 font-mono placeholder:text-gray-400 placeholder:font-sans focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 font-mono placeholder:text-gray-400 placeholder:font-sans focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
         />
         {error && <p className="text-[11px] text-red-500">{error}</p>}
         <button

@@ -62,17 +62,29 @@ export function InlineSelect({
         setOpen(false);
       }
     }
-    function handleScrollOrResize() {
-      setOpen(false);
+    // Scrolling the option list itself must not close the dropdown — only
+    // reposition (or close, if the trigger button scrolled out of view)
+    // when something OUTSIDE the panel scrolls.
+    function handleScroll(e: Event) {
+      if (panelRef.current && panelRef.current.contains(e.target as Node)) return;
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect || rect.bottom < 0 || rect.top > window.innerHeight) {
+        setOpen(false);
+        return;
+      }
+      setPosition({ top: rect.bottom + 4, left: rect.left });
+    }
+    function handleResize() {
+      updatePosition();
     }
 
     document.addEventListener("mousedown", handleClick);
-    window.addEventListener("scroll", handleScrollOrResize, true);
-    window.addEventListener("resize", handleScrollOrResize);
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleResize);
     return () => {
       document.removeEventListener("mousedown", handleClick);
-      window.removeEventListener("scroll", handleScrollOrResize, true);
-      window.removeEventListener("resize", handleScrollOrResize);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleResize);
     };
   }, [open]);
 
@@ -144,7 +156,7 @@ export function InlineSelect({
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search..."
-                    className="w-full pl-8 pr-2 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                    className="w-full pl-8 pr-2 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                   />
                 </div>
               </div>
@@ -166,7 +178,7 @@ export function InlineSelect({
                       onClick={() => handleSelect(opt.value)}
                       className={cn(
                         "w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left text-[13px] hover:bg-gray-50 transition-colors",
-                        opt.value === value ? "text-cyan-600 font-medium" : "text-gray-700"
+                        opt.value === value ? "text-brand-600 font-medium" : "text-gray-700"
                       )}
                     >
                       {opt.label}

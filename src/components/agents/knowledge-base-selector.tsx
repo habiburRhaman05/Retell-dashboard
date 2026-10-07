@@ -54,7 +54,7 @@ export function KnowledgeBaseSelector({
     <div className="px-4 py-3">
       <div className="flex items-center justify-between mb-2">
         <p className="text-[12px] text-gray-600">Knowledge Base</p>
-        {isSaving && <Loader2 className="w-3.5 h-3.5 text-cyan-500 animate-spin" />}
+        {isSaving && <Loader2 className="w-3.5 h-3.5 text-brand-500 animate-spin" />}
       </div>
       <p className="text-[11px] text-gray-400 mb-3">
         Attach a knowledge base so this agent can reference your documents,
@@ -95,7 +95,7 @@ export function KnowledgeBaseSelector({
           No knowledge bases in this location yet.{" "}
           <Link
             href={`/retell/${locationId}/knowledge-base`}
-            className="text-cyan-600 hover:underline inline-flex items-center gap-0.5"
+            className="text-brand-600 hover:underline inline-flex items-center gap-0.5"
           >
             Create one <ExternalLink className="w-3 h-3" />
           </Link>

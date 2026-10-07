@@ -59,7 +59,7 @@ export function VersionHistoryPanel({
         <div className="flex-1 overflow-y-auto px-5 py-4 min-h-[200px]">
           {isLoading && (
             <div className="flex items-center justify-center py-10">
-              <Loader2 className="w-5 h-5 text-cyan-500 animate-spin" />
+              <Loader2 className="w-5 h-5 text-brand-500 animate-spin" />
             </div>
           )}
 
@@ -79,7 +79,7 @@ export function VersionHistoryPanel({
                     className={cn(
                       "flex items-center justify-between gap-3 px-3.5 py-3 rounded-lg border",
                       v.version === currentVersion
-                        ? "border-cyan-300 bg-cyan-50/40"
+                        ? "border-brand-300 bg-brand-50/40"
                         : "border-gray-200"
                     )}
                   >
@@ -94,7 +94,7 @@ export function VersionHistoryPanel({
                           </span>
                         )}
                         {v.version === currentVersion && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-50 text-cyan-600 border border-cyan-200">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-50 text-brand-600 border border-brand-200">
                             Current
                           </span>
                         )}
@@ -121,26 +121,26 @@ export function VersionHistoryPanel({
                   </div>
 
                   {publishingVersion === v.version && (
-                    <div className="mt-2 px-3.5 py-3 rounded-lg border border-cyan-200 bg-cyan-50/30 space-y-2">
+                    <div className="mt-2 px-3.5 py-3 rounded-lg border border-brand-200 bg-brand-50/30 space-y-2">
                       <input
                         type="text"
                         placeholder="Version title (optional)"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                       />
                       <textarea
                         placeholder="What changed in this version? (optional)"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         rows={2}
-                        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 resize-none"
+                        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none"
                       />
                       <div className="flex items-center gap-2">
                         <button
                           onClick={confirmPublish}
                           disabled={publishMut.isPending}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-500 text-white text-[12px] font-medium hover:bg-cyan-600 disabled:opacity-50 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-500 text-white text-[12px] font-medium hover:bg-brand-600 disabled:opacity-50 transition-colors"
                         >
                           {publishMut.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
                           Confirm Publish

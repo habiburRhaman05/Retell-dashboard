@@ -69,7 +69,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   "w-5 h-5 shrink-0 mt-0.5",
                   t.type === "success" && "text-emerald-500",
                   t.type === "error" && "text-red-500",
-                  t.type === "info" && "text-cyan-500"
+                  t.type === "info" && "text-brand-500"
                 )}
               />
               <p className="text-sm text-gray-700 flex-1">{t.message}</p>

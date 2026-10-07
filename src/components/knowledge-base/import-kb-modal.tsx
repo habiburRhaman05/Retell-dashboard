@@ -94,7 +94,7 @@ export function ImportKnowledgeBaseModal({
               placeholder="Search available knowledge bases..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
             />
           </div>
         </div>
@@ -102,7 +102,7 @@ export function ImportKnowledgeBaseModal({
         <div className="flex-1 overflow-y-auto px-6 py-3 min-h-0">
           {isLoading && (
             <div className="flex items-center justify-center py-12">
-              <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
               <span className="ml-3 text-sm text-gray-500">Loading knowledge bases...</span>
             </div>
           )}
@@ -136,7 +136,7 @@ export function ImportKnowledgeBaseModal({
               <div className="flex items-center justify-between mb-3">
                 <button
                   onClick={selectAll}
-                  className="text-xs text-cyan-600 hover:text-cyan-700 font-medium"
+                  className="text-xs text-brand-600 hover:text-brand-700 font-medium"
                 >
                   {selected.size === filtered.length ? "Deselect all" : "Select all"}
                 </button>
@@ -152,7 +152,7 @@ export function ImportKnowledgeBaseModal({
                     className={cn(
                       "w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left",
                       selected.has(kb.knowledge_base_id)
-                        ? "border-cyan-500 bg-cyan-50/50 ring-1 ring-cyan-500/20"
+                        ? "border-brand-500 bg-brand-50/50 ring-1 ring-brand-500/20"
                         : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                     )}
                   >
@@ -160,7 +160,7 @@ export function ImportKnowledgeBaseModal({
                       className={cn(
                         "w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors",
                         selected.has(kb.knowledge_base_id)
-                          ? "bg-cyan-500 border-cyan-500"
+                          ? "bg-brand-500 border-brand-500"
                           : "border-gray-300"
                       )}
                     >
@@ -214,7 +214,7 @@ export function ImportKnowledgeBaseModal({
             <button
               onClick={handleImport}
               disabled={selected.size === 0 || importKbs.isPending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-cyan-500 text-white text-sm font-medium hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {importKbs.isPending ? (
                 <>

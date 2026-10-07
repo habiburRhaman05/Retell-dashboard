@@ -60,7 +60,7 @@ export function TopNavbar() {
                     className={cn(
                       "px-4 py-2 text-[13px] font-medium rounded-md transition-colors",
                       isActive
-                        ? "text-cyan-600"
+                        ? "text-brand-600"
                         : "text-gray-500 hover:text-gray-900"
                     )}
                   >
@@ -112,7 +112,7 @@ export function TopNavbar() {
                     className={cn(
                       "block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors",
                       isActive
-                        ? "text-cyan-600"
+                        ? "text-brand-600"
                         : "text-gray-600 hover:bg-gray-50"
                     )}
                   >

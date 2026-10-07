@@ -144,7 +144,7 @@ export const SourceInputPanel = forwardRef<SourceInputPanelHandle, {
             className={cn(
               "inline-flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors",
               tab === t.id
-                ? "border-cyan-500 text-cyan-600"
+                ? "border-brand-500 text-brand-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             )}
           >
@@ -163,7 +163,7 @@ export const SourceInputPanel = forwardRef<SourceInputPanelHandle, {
               e.preventDefault();
               handleFilesSelected(e.dataTransfer.files);
             }}
-            className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-cyan-300 hover:bg-cyan-50/30 transition-colors"
+            className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-brand-300 hover:bg-brand-50/30 transition-colors"
           >
             <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
             <p className="text-[13px] text-gray-600">
@@ -217,14 +217,14 @@ export const SourceInputPanel = forwardRef<SourceInputPanelHandle, {
             placeholder="Title"
             value={textTitle}
             onChange={(e) => setTextTitle(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all mb-2"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all mb-2"
           />
           <textarea
             placeholder="Paste or write the text content..."
             value={textBody}
             onChange={(e) => setTextBody(e.target.value)}
             rows={4}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all resize-none"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all resize-none"
           />
           <button
             type="button"
@@ -276,7 +276,7 @@ export const SourceInputPanel = forwardRef<SourceInputPanelHandle, {
                   addUrl();
                 }
               }}
-              className="flex-1 px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+              className="flex-1 px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
             />
             <button
               type="button"

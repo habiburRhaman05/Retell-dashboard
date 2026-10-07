@@ -176,7 +176,7 @@ export default function AgentDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="w-6 h-6 animate-spin text-cyan-500" />
+        <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
       </div>
     );
   }
@@ -189,7 +189,7 @@ export default function AgentDetailPage() {
         </p>
         <Link
           href={`/retell/${locationId}/agents`}
-          className="text-cyan-500 text-sm mt-3 inline-block hover:underline"
+          className="text-brand-500 text-sm mt-3 inline-block hover:underline"
         >
           Back to Agents
         </Link>
@@ -242,7 +242,7 @@ export default function AgentDetailPage() {
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setShowTestCall(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-500 text-white text-[12px] font-medium hover:bg-cyan-600 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-500 text-white text-[12px] font-medium hover:bg-brand-600 transition-colors"
             >
               <PhoneCall className="w-3.5 h-3.5" />
               Test Call
@@ -322,7 +322,7 @@ export default function AgentDetailPage() {
                 className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
                   hasChanges
-                    ? "bg-cyan-500 text-white hover:bg-cyan-600"
+                    ? "bg-brand-500 text-white hover:bg-brand-600"
                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
                 )}
               >
@@ -358,7 +358,7 @@ export default function AgentDetailPage() {
                 value={beginMessage}
                 onChange={(e) => setBeginMessage(e.target.value)}
                 placeholder="Hi, how can I help you today?"
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-800 placeholder:text-gray-300 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-800 placeholder:text-gray-300 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
               />
             </div>
           </div>
@@ -366,7 +366,7 @@ export default function AgentDetailPage() {
           {/* Right: Settings panels */}
           <div className="w-full lg:w-[380px] shrink-0 overflow-y-auto bg-gray-50/50 relative">
             {(updateAgentMut.isPending || updateLlmMut.isPending) && (
-              <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 bg-cyan-500 text-white text-[12px] font-medium shadow-sm">
+              <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 bg-brand-500 text-white text-[12px] font-medium shadow-sm">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 Saving changes...
               </div>

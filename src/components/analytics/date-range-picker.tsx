@@ -92,7 +92,7 @@ export function DateRangePicker({
                   className="w-full flex items-center justify-between gap-2 px-3.5 py-2 text-left text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   {preset.label}
-                  {selected && <Check className="w-4 h-4 text-cyan-500" strokeWidth={2.5} />}
+                  {selected && <Check className="w-4 h-4 text-brand-500" strokeWidth={2.5} />}
                 </button>
               );
             })}

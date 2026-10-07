@@ -90,7 +90,7 @@ export default function KnowledgeBasePage() {
           </button>
           <button
             onClick={() => setShowCreate(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-cyan-500 text-white text-[13px] font-medium hover:bg-cyan-600 transition-colors shadow-sm shadow-cyan-500/20"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-brand-500 text-white text-[13px] font-medium hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/20"
           >
             <Plus className="w-3.5 h-3.5" />
             Create Knowledge Base
@@ -107,7 +107,7 @@ export default function KnowledgeBasePage() {
               placeholder="Search knowledge bases..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
             />
           </div>
 
@@ -126,7 +126,7 @@ export default function KnowledgeBasePage() {
                 className={cn(
                   "p-2 transition-colors",
                   viewMode === "grid"
-                    ? "bg-cyan-50 text-cyan-600"
+                    ? "bg-brand-50 text-brand-600"
                     : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                 )}
               >
@@ -137,7 +137,7 @@ export default function KnowledgeBasePage() {
                 className={cn(
                   "p-2 transition-colors",
                   viewMode === "list"
-                    ? "bg-cyan-50 text-cyan-600"
+                    ? "bg-brand-50 text-brand-600"
                     : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                 )}
               >

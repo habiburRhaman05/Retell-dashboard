@@ -1,10 +1,33 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-primary: #0ea5e9;
-  --color-primary-hover: #0284c7;
-  --color-primary-light: #e0f2fe;
-  --color-primary-dark: #0369a1;
+  /*
+   * Brand ramp — sampled from the Bright AI Solutions host app
+   * (brand-500 = #C0392B, the exact pixel value of its active nav state).
+   * This is the ONE place the product's accent color is defined; every
+   * `brand-*` utility class (bg-brand-500, text-brand-600, ring-brand-500/20,
+   * etc.) derives from it. To re-theme the app, change only this block.
+   * Named "brand" rather than "accent" so it never collides with Tailwind's
+   * own `accent-*` utility (the CSS accent-color property, e.g. accent-brand-500
+   * on a range input).
+   */
+  --color-brand-50: #fdf3f2;
+  --color-brand-100: #fae7e5;
+  --color-brand-200: #f4ccc8;
+  --color-brand-300: #e9a29b;
+  --color-brand-400: #dc6c60;
+  --color-brand-500: #c0392b;
+  --color-brand-600: #a02f22;
+  --color-brand-700: #812318;
+  --color-brand-800: #6b1d14;
+  --color-brand-900: #541812;
+
+  --color-primary: var(--color-brand-500);
+  --color-primary-hover: var(--color-brand-600);
+  --color-primary-light: var(--color-brand-50);
+  --color-primary-dark: var(--color-brand-700);
+  --color-accent: var(--color-brand-500);
+
   --color-surface: #ffffff;
   --color-surface-secondary: #f9fafb;
   --color-surface-hover: #f3f4f6;
@@ -17,10 +40,18 @@
   --color-success-light: #ecfdf5;
   --color-warning: #f59e0b;
   --color-warning-light: #fffbeb;
-  --color-danger: #ef4444;
-  --color-danger-hover: #dc2626;
+  /*
+   * Destructive actions stay in a visibly different red than the brand
+   * color on purpose — brand-500 (#C0392B) and a standard alert red sit
+   * only ~6 degrees of hue apart, so "Delete" and "primary action" buttons
+   * would be hard to tell apart on hue alone. danger is pushed cooler
+   * (toward magenta) and more saturated to read as a distinct "stop" red,
+   * and destructive buttons should stay ghost/text style (never a solid
+   * fill) so shape is the first line of defense, not color.
+   */
+  --color-danger: #e11d48;
+  --color-danger-hover: #be123c;
   --color-danger-light: #fef2f2;
-  --color-accent: #06b6d4;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

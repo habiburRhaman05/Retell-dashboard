@@ -80,7 +80,7 @@ export function SliderSetting({
                 onSave(local);
                 setDirty(false);
               }}
-              className="text-[10px] font-medium text-cyan-600 hover:text-cyan-700"
+              className="text-[10px] font-medium text-brand-600 hover:text-brand-700"
             >
               Save
             </button>
@@ -97,7 +97,7 @@ export function SliderSetting({
           setLocal(parseFloat(e.target.value));
           setDirty(true);
         }}
-        className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 accent-cyan-500"
+        className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 accent-brand-500"
       />
     </div>
   );
@@ -126,7 +126,7 @@ export function ToggleSetting({
         onClick={() => onSave(!value)}
         className={cn(
           "relative w-9 h-5 rounded-full transition-colors shrink-0",
-          value ? "bg-cyan-500" : "bg-gray-300"
+          value ? "bg-brand-500" : "bg-gray-300"
         )}
       >
         <span
@@ -157,7 +157,7 @@ export function SelectSetting({
       <select
         value={value}
         onChange={(e) => onSave(e.target.value)}
-        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -196,18 +196,18 @@ export function RadioGroupSetting({
             className={cn(
               "w-full flex items-start gap-2.5 px-3 py-2 rounded-lg border text-left transition-colors",
               value === o.value
-                ? "border-cyan-500 bg-cyan-50/50"
+                ? "border-brand-500 bg-brand-50/50"
                 : "border-gray-200 hover:border-gray-300"
             )}
           >
             <span
               className={cn(
                 "w-3.5 h-3.5 rounded-full border-2 mt-0.5 shrink-0 flex items-center justify-center",
-                value === o.value ? "border-cyan-500" : "border-gray-300"
+                value === o.value ? "border-brand-500" : "border-gray-300"
               )}
             >
               {value === o.value && (
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
               )}
             </span>
             <span>
@@ -276,7 +276,7 @@ export function NumberSetting({
           onChange={(e) => setLocal(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => e.key === "Enter" && commit()}
-          className="w-24 px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+          className="w-24 px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
         />
         {suffix && <span className="text-[11px] text-gray-400">{suffix}</span>}
       </div>
@@ -330,7 +330,7 @@ export function TextSetting({
             setDirty(true);
           }}
           onBlur={commit}
-          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 resize-none"
+          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none"
         />
       ) : (
         <input
@@ -343,7 +343,7 @@ export function TextSetting({
           }}
           onBlur={commit}
           onKeyDown={(e) => e.key === "Enter" && commit()}
-          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
         />
       )}
     </div>
@@ -397,7 +397,7 @@ export function TagListSetting({
               addTag();
             }
           }}
-          className="flex-1 px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+          className="flex-1 px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
         />
         <button
           onClick={addTag}

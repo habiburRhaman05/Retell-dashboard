@@ -56,7 +56,7 @@ export default function EditAgentPage() {
         <p className="text-red-500 text-sm">Agent not found</p>
         <Link
           href={`/retell/${locationId}/dashboard`}
-          className="text-cyan-500 text-sm mt-3 inline-block hover:underline"
+          className="text-brand-500 text-sm mt-3 inline-block hover:underline"
         >
           Back to Dashboard
         </Link>

@@ -107,7 +107,7 @@ function ImportModal({
               placeholder="Search available agents..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
             />
           </div>
         </div>
@@ -115,7 +115,7 @@ function ImportModal({
         <div className="flex-1 overflow-y-auto px-6 py-3 min-h-0">
           {isLoading && (
             <div className="flex items-center justify-center py-12">
-              <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
               <span className="ml-3 text-sm text-gray-500">Loading agents...</span>
             </div>
           )}
@@ -138,7 +138,7 @@ function ImportModal({
               <div className="flex items-center justify-between mb-3">
                 <button
                   onClick={selectAll}
-                  className="text-xs text-cyan-600 hover:text-cyan-700 font-medium"
+                  className="text-xs text-brand-600 hover:text-brand-700 font-medium"
                 >
                   {selected.size === filtered.length ? "Deselect all" : "Select all"}
                 </button>
@@ -154,7 +154,7 @@ function ImportModal({
                     className={cn(
                       "w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left",
                       selected.has(agent.agent_id)
-                        ? "border-cyan-500 bg-cyan-50/50 ring-1 ring-cyan-500/20"
+                        ? "border-brand-500 bg-brand-50/50 ring-1 ring-brand-500/20"
                         : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                     )}
                   >
@@ -162,7 +162,7 @@ function ImportModal({
                       className={cn(
                         "w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors",
                         selected.has(agent.agent_id)
-                          ? "bg-cyan-500 border-cyan-500"
+                          ? "bg-brand-500 border-brand-500"
                           : "border-gray-300"
                       )}
                     >
@@ -217,7 +217,7 @@ function ImportModal({
             <button
               onClick={handleImport}
               disabled={selected.size === 0 || importAgents.isPending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-cyan-500 text-white text-sm font-medium hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {importAgents.isPending ? (
                 <>
@@ -300,7 +300,7 @@ export default function AgentsPage() {
           </button>
           <Link
             href={`/retell/${locationId}/agents/new`}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-cyan-500 text-white text-[13px] font-medium hover:bg-cyan-600 transition-colors shadow-sm shadow-cyan-500/20"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-brand-500 text-white text-[13px] font-medium hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/20"
           >
             <Plus className="w-3.5 h-3.5" />
             Create Agent
@@ -317,7 +317,7 @@ export default function AgentsPage() {
               placeholder="Search agents..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
             />
           </div>
 
@@ -338,7 +338,7 @@ export default function AgentsPage() {
                 className={cn(
                   "p-2 transition-colors",
                   viewMode === "grid"
-                    ? "bg-cyan-50 text-cyan-600"
+                    ? "bg-brand-50 text-brand-600"
                     : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                 )}
               >
@@ -349,7 +349,7 @@ export default function AgentsPage() {
                 className={cn(
                   "p-2 transition-colors",
                   viewMode === "list"
-                    ? "bg-cyan-50 text-cyan-600"
+                    ? "bg-brand-50 text-brand-600"
                     : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                 )}
               >

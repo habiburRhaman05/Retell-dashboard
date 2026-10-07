@@ -16,14 +16,14 @@ import {
 import { useState, useRef, useEffect } from "react";
 
 const ACCENT_COLORS = [
-  "from-cyan-400 to-blue-500",
+  "from-brand-400 to-blue-500",
   "from-violet-400 to-purple-500",
   "from-emerald-400 to-teal-500",
   "from-amber-400 to-orange-500",
   "from-rose-400 to-pink-500",
   "from-indigo-400 to-blue-600",
   "from-fuchsia-400 to-purple-600",
-  "from-sky-400 to-cyan-500",
+  "from-sky-400 to-brand-500",
 ];
 
 function getAccentColor(id: string) {
@@ -176,7 +176,7 @@ export function AgentCard({
             <StatusBadge published={agent.is_published} />
             <span className="text-[11px] text-gray-400">v{agent.version}</span>
           </div>
-          <span className="text-xs text-cyan-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
+          <span className="text-xs text-brand-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
             View Details <ExternalLink className="w-3 h-3" />
           </span>
         </div>

@@ -329,7 +329,7 @@ function ToolForm({
                 className={cn(
                   "flex items-center gap-2 px-2.5 py-2 rounded-md border text-left transition-colors",
                   toolType === t
-                    ? "border-cyan-500 bg-cyan-50/50"
+                    ? "border-brand-500 bg-brand-50/50"
                     : "border-gray-200 hover:border-gray-300"
                 )}
               >
@@ -349,7 +349,7 @@ function ToolForm({
           value={advancedJson}
           onChange={(e) => setAdvancedJson(e.target.value)}
           rows={8}
-          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[11px] font-mono text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 resize-none"
+          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[11px] font-mono text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none"
         />
       ) : (
         <>
@@ -361,14 +361,14 @@ function ToolForm({
               setName(e.target.value);
               setError(null);
             }}
-            className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+            className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
           />
           <textarea
             placeholder="Describe when the agent should use this function"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 resize-none"
+            className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none"
           />
 
           {toolType === "custom" && (
@@ -390,7 +390,7 @@ function ToolForm({
                   placeholder="https://your-api.com/endpoint"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  className="flex-1 min-w-0 px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                  className="flex-1 min-w-0 px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                 />
               </div>
               <textarea
@@ -398,7 +398,7 @@ function ToolForm({
                 value={paramsJson}
                 onChange={(e) => setParamsJson(e.target.value)}
                 rows={4}
-                className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[11px] font-mono text-gray-700 placeholder:text-gray-400 placeholder:font-sans focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 resize-none"
+                className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[11px] font-mono text-gray-700 placeholder:text-gray-400 placeholder:font-sans focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none"
               />
               <div className="flex items-center gap-4 text-[12px] text-gray-600">
                 <label className="flex items-center gap-1.5">
@@ -406,7 +406,7 @@ function ToolForm({
                     type="checkbox"
                     checked={speakDuring}
                     onChange={(e) => setSpeakDuring(e.target.checked)}
-                    className="rounded border-gray-300 text-cyan-500"
+                    className="rounded border-gray-300 text-brand-500"
                   />
                   Speak while running
                 </label>
@@ -415,7 +415,7 @@ function ToolForm({
                     type="checkbox"
                     checked={speakAfter}
                     onChange={(e) => setSpeakAfter(e.target.checked)}
-                    className="rounded border-gray-300 text-cyan-500"
+                    className="rounded border-gray-300 text-brand-500"
                   />
                   Speak after result
                 </label>
@@ -445,7 +445,7 @@ function ToolForm({
                 placeholder="Phone number to transfer to, e.g. +14155551234 (leave blank to let the model decide)"
                 value={transferNumber}
                 onChange={(e) => setTransferNumber(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
               />
               <div className="flex gap-1.5">
                 {(["cold_transfer", "warm_transfer"] as const).map((k) => (
@@ -455,7 +455,7 @@ function ToolForm({
                     className={cn(
                       "px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors",
                       transferKind === k
-                        ? "border-cyan-500 bg-cyan-50 text-cyan-600"
+                        ? "border-brand-500 bg-brand-50 text-brand-600"
                         : "border-gray-200 text-gray-500 hover:border-gray-300"
                     )}
                   >
@@ -472,7 +472,7 @@ function ToolForm({
               value={smsContent}
               onChange={(e) => setSmsContent(e.target.value)}
               rows={2}
-              className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 resize-none"
+              className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none"
             />
           )}
 
@@ -491,7 +491,7 @@ function ToolForm({
         <button
           onClick={submit}
           disabled={isSaving}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-500 text-white text-[12px] font-medium hover:bg-cyan-600 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-500 text-white text-[12px] font-medium hover:bg-brand-600 disabled:opacity-50 transition-colors"
         >
           {isSaving && <Loader2 className="w-3 h-3 animate-spin" />}
           Save Function

@@ -187,14 +187,14 @@ function AnalysisItemForm({
           setName(e.target.value);
           setError(null);
         }}
-        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
       />
       <textarea
         placeholder="Describe what to extract, e.g. A 2-sentence summary of the call"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         rows={2}
-        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 resize-none"
+        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none"
       />
       <div className="flex gap-1.5">
         {(Object.keys(TYPE_LABELS) as PostCallAnalysisFieldType[]).map((t) => (
@@ -204,7 +204,7 @@ function AnalysisItemForm({
             className={cn(
               "px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors",
               type === t
-                ? "border-cyan-500 bg-cyan-50 text-cyan-600"
+                ? "border-brand-500 bg-brand-50 text-brand-600"
                 : "border-gray-200 text-gray-500 hover:border-gray-300"
             )}
           >
@@ -218,7 +218,7 @@ function AnalysisItemForm({
           placeholder="Choices, comma separated: positive, neutral, negative"
           value={choicesInput}
           onChange={(e) => setChoicesInput(e.target.value)}
-          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
         />
       )}
       {error && <p className="text-[11px] text-red-500">{error}</p>}
@@ -226,7 +226,7 @@ function AnalysisItemForm({
         <button
           onClick={submit}
           disabled={isSaving}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-500 text-white text-[12px] font-medium hover:bg-cyan-600 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-500 text-white text-[12px] font-medium hover:bg-brand-600 disabled:opacity-50 transition-colors"
         >
           {isSaving && <Loader2 className="w-3 h-3 animate-spin" />}
           Save Field

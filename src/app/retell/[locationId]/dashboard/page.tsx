@@ -113,7 +113,7 @@ export default function OverviewPage() {
             </h2>
             <Link
               href={`/retell/${locationId}/agents`}
-              className="text-[12px] text-cyan-600 font-medium hover:text-cyan-700 inline-flex items-center gap-1"
+              className="text-[12px] text-brand-600 font-medium hover:text-brand-700 inline-flex items-center gap-1"
             >
               View all <ArrowRight className="w-3 h-3" />
             </Link>
@@ -130,7 +130,7 @@ export default function OverviewPage() {
                   href={`/retell/${locationId}/agents/${agent.agent_id}`}
                   className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
                     {(agent.agent_name || "U")[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -199,7 +199,7 @@ export default function OverviewPage() {
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-cyan-400 to-cyan-500 rounded-full transition-all duration-500"
+                          className="h-full bg-gradient-to-r from-brand-400 to-brand-500 rounded-full transition-all duration-500"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -234,7 +234,7 @@ function KPICard({
   color: "cyan" | "emerald" | "amber" | "violet";
 }) {
   const styles = {
-    cyan: "bg-cyan-50 text-cyan-600",
+    cyan: "bg-brand-50 text-brand-600",
     emerald: "bg-emerald-50 text-emerald-600",
     amber: "bg-amber-50 text-amber-600",
     violet: "bg-violet-50 text-violet-600",

@@ -113,7 +113,7 @@ export default function KnowledgeBaseDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="w-6 h-6 animate-spin text-cyan-500" />
+        <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
       </div>
     );
   }
@@ -126,7 +126,7 @@ export default function KnowledgeBaseDetailPage() {
         </p>
         <Link
           href={`/retell/${locationId}/knowledge-base`}
-          className="text-cyan-500 text-sm mt-3 inline-block hover:underline"
+          className="text-brand-500 text-sm mt-3 inline-block hover:underline"
         >
           Back to Knowledge Bases
         </Link>
@@ -236,7 +236,7 @@ export default function KnowledgeBaseDetailPage() {
               <h2 className="text-[13px] font-semibold text-gray-700">Sources</h2>
               <button
                 onClick={() => setShowAddPanel((v) => !v)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-500 text-white text-[12px] font-medium hover:bg-cyan-600 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-500 text-white text-[12px] font-medium hover:bg-brand-600 transition-colors"
               >
                 {showAddPanel ? (
                   <X className="w-3.5 h-3.5" />
@@ -254,7 +254,7 @@ export default function KnowledgeBaseDetailPage() {
                   <button
                     onClick={handleAddSources}
                     disabled={addSourcesMut.isPending}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-cyan-500 text-white text-[13px] font-medium hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-500 text-white text-[13px] font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {addSourcesMut.isPending && (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -338,7 +338,7 @@ function SourceRow({
           href={source.file_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[11px] text-cyan-600 hover:underline shrink-0"
+          className="text-[11px] text-brand-600 hover:underline shrink-0"
         >
           View
         </a>
