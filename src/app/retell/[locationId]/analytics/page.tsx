@@ -6,14 +6,14 @@ import { useAnalytics } from "@/hooks/use-analytics";
 import { DateRangePicker, presetRange, type DateRange } from "@/components/analytics/date-range-picker";
 import { CallAnalyticsView } from "@/components/analytics/call-analytics-view";
 import { VoiceAiAnalyticsView } from "@/components/analytics/voice-ai-analytics-view";
-import { Loader2, AlertCircle, PhoneOff, RefreshCw, Phone, Sparkles } from "lucide-react";
+import { Loader2, AlertCircle, PhoneOff, RefreshCw, Phone, AudioWaveform } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type AnalyticsTab = "call" | "voice-ai";
 
 const TABS: { id: AnalyticsTab; label: string; icon: typeof Phone }[] = [
   { id: "call", label: "Call Analytics", icon: Phone },
-  { id: "voice-ai", label: "Voice AI Analytics", icon: Sparkles },
+  { id: "voice-ai", label: "Voice AI Analytics", icon: AudioWaveform },
 ];
 
 export default function AnalyticsPage() {
@@ -47,19 +47,19 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-gray-200 mb-5">
+      <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-gray-100 mb-5">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={cn(
-              "inline-flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors",
+              "inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-lg transition-all",
               tab === t.id
-                ? "border-brand-500 text-brand-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "bg-brand-500 text-white shadow-sm"
+                : "text-gray-600 hover:text-gray-900 hover:bg-white/70"
             )}
           >
-            <t.icon className="w-3.5 h-3.5" />
+            <t.icon className="w-4 h-4" />
             {t.label}
           </button>
         ))}
