@@ -3,12 +3,13 @@
 import Link from "next/link";
 import type { KnowledgeBase } from "@/types/retell";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import {
   MoreVertical,
   Trash2,
   FileText,
   Clock,
-  ExternalLink,
+  ArrowUpRight,
   Loader2,
   AlertCircle,
   RefreshCw,
@@ -16,12 +17,12 @@ import {
 import { useState, useRef, useEffect } from "react";
 
 const ACCENT_COLORS = [
-  "from-brand-400 to-blue-500",
-  "from-violet-400 to-purple-500",
-  "from-emerald-400 to-teal-500",
-  "from-amber-400 to-orange-500",
-  "from-rose-400 to-pink-500",
-  "from-indigo-400 to-blue-600",
+  "from-brand-500 to-brand-700",
+  "from-violet-500 to-purple-700",
+  "from-emerald-500 to-teal-700",
+  "from-amber-500 to-orange-700",
+  "from-rose-500 to-pink-700",
+  "from-indigo-500 to-blue-700",
 ];
 
 function getAccentColor(id: string) {
@@ -60,10 +61,10 @@ export function KnowledgeBaseCard({
 
   if (viewMode === "list") {
     return (
-      <div className="flex items-center gap-4 px-4 py-3.5 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition-all group">
+      <div className="flex items-center gap-4 px-4 py-3.5 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 hover:shadow-sm transition-all duration-150 group">
         <div
           className={cn(
-            "w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold shrink-0",
+            "w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm",
             accent
           )}
         >
@@ -76,7 +77,7 @@ export function KnowledgeBaseCard({
         >
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-sm font-medium text-gray-900 truncate group-hover:text-brand-600 transition-colors">
                 {kb.knowledge_base_name}
               </p>
               <StatusBadge status={kb.status} />
@@ -106,7 +107,7 @@ export function KnowledgeBaseCard({
               e.preventDefault();
               setMenuOpen(!menuOpen);
             }}
-            className="p-1.5 rounded-md hover:bg-gray-200/60 transition-colors opacity-0 group-hover:opacity-100"
+            className="p-1.5 rounded-lg hover:bg-gray-200/60 transition-all duration-150 opacity-0 group-hover:opacity-100"
           >
             <MoreVertical className="w-4 h-4 text-gray-400" />
           </button>
@@ -119,7 +120,7 @@ export function KnowledgeBaseCard({
   }
 
   return (
-    <div className="relative rounded-xl border border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm transition-all group">
+    <div className="relative rounded-xl border border-gray-200 bg-white hover:border-gray-300 hover:shadow-md transition-all duration-200 group">
       <Link
         href={`/retell/${locationId}/knowledge-base/${kb.knowledge_base_id}`}
         className="block p-5"
@@ -127,14 +128,14 @@ export function KnowledgeBaseCard({
         <div className="flex items-start gap-3.5 mb-4">
           <div
             className={cn(
-              "w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-sm font-bold shrink-0",
+              "w-11 h-11 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm",
               accent
             )}
           >
             {kb.knowledge_base_name[0]?.toUpperCase() || "K"}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-[15px] font-semibold text-gray-900 truncate">
+            <h3 className="text-[15px] font-semibold text-gray-900 truncate group-hover:text-brand-600 transition-colors">
               {kb.knowledge_base_name}
             </h3>
             <p className="text-[11px] text-gray-400 font-mono mt-0.5">
@@ -163,8 +164,8 @@ export function KnowledgeBaseCard({
 
         <div className="flex items-center justify-between pt-3.5 border-t border-gray-100">
           <StatusBadge status={kb.status} />
-          <span className="text-xs text-brand-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
-            View Details <ExternalLink className="w-3 h-3" />
+          <span className="text-xs text-brand-500 font-medium opacity-0 group-hover:opacity-100 transition-all duration-150 inline-flex items-center gap-1">
+            Open <ArrowUpRight className="w-3 h-3" />
           </span>
         </div>
       </Link>
@@ -176,7 +177,7 @@ export function KnowledgeBaseCard({
             e.stopPropagation();
             setMenuOpen(!menuOpen);
           }}
-          className="p-1.5 rounded-md hover:bg-gray-100 transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-150 opacity-0 group-hover:opacity-100"
         >
           <MoreVertical className="w-4 h-4 text-gray-400" />
         </button>
@@ -210,51 +211,37 @@ export function StatusBadge({ status }: { status: KnowledgeBase["status"] }) {
   const config = {
     complete: {
       label: "Ready",
-      className: "bg-emerald-50 text-emerald-600 border-emerald-200",
-      dot: "bg-emerald-500",
+      variant: "success" as const,
       icon: null,
     },
     in_progress: {
       label: "Processing",
-      className: "bg-amber-50 text-amber-600 border-amber-200",
-      dot: "bg-amber-500",
+      variant: "warning" as const,
       icon: Loader2,
     },
     refreshing_in_progress: {
       label: "Refreshing",
-      className: "bg-blue-50 text-blue-600 border-blue-200",
-      dot: "bg-blue-500",
+      variant: "info" as const,
       icon: Loader2,
     },
     error: {
       label: "Error",
-      className: "bg-red-50 text-red-600 border-red-200",
-      dot: "bg-red-500",
+      variant: "error" as const,
       icon: AlertCircle,
     },
   }[status] || {
     label: status,
-    className: "bg-gray-50 text-gray-600 border-gray-200",
-    dot: "bg-gray-400",
+    variant: "neutral" as const,
     icon: null,
   };
 
   const Icon = config.icon;
 
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border",
-        config.className
-      )}
-    >
-      {Icon ? (
-        <Icon className="w-2.5 h-2.5 animate-spin" />
-      ) : (
-        <span className={cn("w-1.5 h-1.5 rounded-full", config.dot)} />
-      )}
+    <Badge variant={config.variant} dot={!Icon}>
+      {Icon && <Icon className="w-2.5 h-2.5 animate-spin" />}
       {config.label}
-    </span>
+    </Badge>
   );
 }
 
@@ -266,13 +253,14 @@ function DropdownMenu({
   onClose: () => void;
 }) {
   return (
-    <div className="absolute right-0 top-full mt-1 w-36 rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20">
+    <div className="absolute right-0 top-full mt-1.5 w-40 rounded-xl border border-gray-200 bg-white shadow-lg py-1.5 z-20 animate-fade-in">
       <button
         onClick={() => {
           onClose();
           onDelete();
         }}
-        className="flex items-center gap-2 px-3 py-2 text-[13px] text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+        className="flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-red-600 hover:bg-red-50 transition-colors w-full text-left rounded-lg mx-1"
+        style={{ width: "calc(100% - 8px)" }}
       >
         <Trash2 className="w-3.5 h-3.5" />
         Delete

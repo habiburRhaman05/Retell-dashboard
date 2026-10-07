@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { X, Check, Search, Download } from "lucide-react";
+import { X, Check, Download } from "lucide-react";
+import { SearchInput } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/layout/toast";
 import {
@@ -87,16 +88,11 @@ export function ImportKnowledgeBaseModal({
         </div>
 
         <div className="px-6 py-3 border-b border-gray-100">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search available knowledge bases..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
-            />
-          </div>
+          <SearchInput
+            placeholder="Search available knowledge bases..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-3 min-h-0">

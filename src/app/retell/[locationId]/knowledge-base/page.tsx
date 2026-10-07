@@ -11,8 +11,10 @@ import { CreateKnowledgeBaseModal } from "@/components/knowledge-base/create-kb-
 import { ImportKnowledgeBaseModal } from "@/components/knowledge-base/import-kb-modal";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { SearchInput } from "@/components/ui/input";
 import {
-  Search,
   LayoutGrid,
   List,
   ArrowUpDown,
@@ -72,59 +74,52 @@ export default function KnowledgeBasePage() {
   };
 
   return (
-    <div className="max-w-[1800px] mx-auto px-4 lg:px-6 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-lg font-semibold text-gray-900">Knowledge Bases</h1>
-          <p className="text-[13px] text-gray-500 mt-0.5">
-            Manage documents, text, and URLs your agents can reference
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowImport(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-gray-200 text-[13px] font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Import
-          </button>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-brand-500 text-white text-[13px] font-medium hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/20"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Create Knowledge Base
-          </button>
-        </div>
-      </div>
+    <div className="max-w-[1800px] mx-auto px-4 lg:px-6 py-8 animate-fade-in">
+      <PageHeader
+        title="Knowledge Bases"
+        description="Manage documents, text, and URLs your agents can reference"
+        className="mb-6"
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              icon={Download}
+              onClick={() => setShowImport(true)}
+            >
+              Import
+            </Button>
+            <Button icon={Plus} onClick={() => setShowCreate(true)}>
+              Create Knowledge Base
+            </Button>
+          </>
+        }
+      />
 
-      <div className="bg-white rounded-t-xl border border-gray-200 px-5 py-4">
+      <div className="bg-white rounded-t-xl border border-gray-200 shadow-sm px-5 py-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
+          <div className="flex-1 max-w-sm">
+            <SearchInput
               placeholder="Search knowledge bases..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
             />
           </div>
 
           <div className="flex items-center gap-2 ml-auto">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={ArrowUpDown}
               onClick={() => setSortBy(sortBy === "name" ? "status" : "name")}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-[13px] text-gray-600 hover:bg-gray-50 transition-colors"
             >
-              <ArrowUpDown className="w-3.5 h-3.5" />
               {sortBy === "name" ? "Name" : "Status"}
-            </button>
+            </Button>
 
             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
               <button
                 onClick={() => setViewMode("grid")}
                 className={cn(
-                  "p-2 transition-colors",
+                  "p-2 transition-all duration-150",
                   viewMode === "grid"
                     ? "bg-brand-50 text-brand-600"
                     : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
@@ -135,7 +130,7 @@ export default function KnowledgeBasePage() {
               <button
                 onClick={() => setViewMode("list")}
                 className={cn(
-                  "p-2 transition-colors",
+                  "p-2 transition-all duration-150",
                   viewMode === "list"
                     ? "bg-brand-50 text-brand-600"
                     : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
@@ -148,15 +143,15 @@ export default function KnowledgeBasePage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-b-xl border border-t-0 border-gray-200 p-5 min-h-[400px]">
+      <div className="bg-white rounded-b-xl border border-t-0 border-gray-200 shadow-sm p-5 min-h-[400px]">
         {isLoading && <LoadingSkeleton count={6} viewMode={viewMode} />}
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+          <div className="rounded-xl border border-red-200 bg-red-50/50 p-8 text-center">
             <p className="text-sm text-red-600 font-medium">
               Failed to load knowledge bases
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-1.5">
               {error instanceof Error ? error.message : "Unknown error"}
             </p>
           </div>

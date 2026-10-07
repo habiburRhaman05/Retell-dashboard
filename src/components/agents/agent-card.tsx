@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { RetellAgent } from "@/types/retell";
 import { timeAgo } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import {
   MoreVertical,
   Pencil,
@@ -11,19 +12,19 @@ import {
   Volume2,
   Globe,
   Clock,
-  ExternalLink,
+  ArrowUpRight,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 const ACCENT_COLORS = [
-  "from-brand-400 to-blue-500",
-  "from-violet-400 to-purple-500",
-  "from-emerald-400 to-teal-500",
-  "from-amber-400 to-orange-500",
-  "from-rose-400 to-pink-500",
-  "from-indigo-400 to-blue-600",
-  "from-fuchsia-400 to-purple-600",
-  "from-sky-400 to-brand-500",
+  "from-brand-500 to-brand-700",
+  "from-violet-500 to-purple-700",
+  "from-emerald-500 to-teal-700",
+  "from-amber-500 to-orange-700",
+  "from-rose-500 to-pink-700",
+  "from-indigo-500 to-blue-700",
+  "from-fuchsia-500 to-purple-700",
+  "from-sky-500 to-blue-700",
 ];
 
 function getAccentColor(id: string) {
@@ -67,10 +68,10 @@ export function AgentCard({
 
   if (viewMode === "list") {
     return (
-      <div className="flex items-center gap-4 px-4 py-3.5 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition-all group">
+      <div className="flex items-center gap-4 px-4 py-3.5 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 hover:shadow-sm transition-all duration-150 group">
         <div
           className={cn(
-            "w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold shrink-0",
+            "w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm",
             accent
           )}
         >
@@ -83,10 +84,12 @@ export function AgentCard({
         >
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-sm font-medium text-gray-900 truncate group-hover:text-brand-600 transition-colors">
                 {agent.agent_name || "Unnamed Agent"}
               </p>
-              <StatusBadge published={agent.is_published} />
+              <Badge variant={agent.is_published ? "success" : "warning"} dot>
+                {agent.is_published ? "Published" : "Draft"}
+              </Badge>
             </div>
             <p className="text-xs text-gray-400 font-mono mt-0.5">
               {agent.agent_id.slice(0, 24)}...
@@ -117,7 +120,7 @@ export function AgentCard({
               e.preventDefault();
               setMenuOpen(!menuOpen);
             }}
-            className="p-1.5 rounded-md hover:bg-gray-200/60 transition-colors opacity-0 group-hover:opacity-100"
+            className="p-1.5 rounded-lg hover:bg-gray-200/60 transition-all duration-150 opacity-0 group-hover:opacity-100"
           >
             <MoreVertical className="w-4 h-4 text-gray-400" />
           </button>
@@ -135,7 +138,7 @@ export function AgentCard({
   }
 
   return (
-    <div className="relative rounded-xl border border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm transition-all group">
+    <div className="relative rounded-xl border border-gray-200 bg-white hover:border-gray-300 hover:shadow-md transition-all duration-200 group">
       <Link
         href={`/retell/${locationId}/agents/${agent.agent_id}`}
         className="block p-5"
@@ -143,14 +146,14 @@ export function AgentCard({
         <div className="flex items-start gap-3.5 mb-4">
           <div
             className={cn(
-              "w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-sm font-bold shrink-0",
+              "w-11 h-11 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm",
               accent
             )}
           >
             {(agent.agent_name || "U")[0].toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-[15px] font-semibold text-gray-900 truncate">
+            <h3 className="text-[15px] font-semibold text-gray-900 truncate group-hover:text-brand-600 transition-colors">
               {agent.agent_name || "Unnamed Agent"}
             </h3>
             <p className="text-[11px] text-gray-400 font-mono mt-0.5">
@@ -173,11 +176,13 @@ export function AgentCard({
 
         <div className="flex items-center justify-between pt-3.5 border-t border-gray-100">
           <div className="flex items-center gap-2">
-            <StatusBadge published={agent.is_published} />
+            <Badge variant={agent.is_published ? "success" : "warning"} dot>
+              {agent.is_published ? "Published" : "Draft"}
+            </Badge>
             <span className="text-[11px] text-gray-400">v{agent.version}</span>
           </div>
-          <span className="text-xs text-brand-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
-            View Details <ExternalLink className="w-3 h-3" />
+          <span className="text-xs text-brand-500 font-medium opacity-0 group-hover:opacity-100 transition-all duration-150 inline-flex items-center gap-1">
+            Open <ArrowUpRight className="w-3 h-3" />
           </span>
         </div>
       </Link>
@@ -189,7 +194,7 @@ export function AgentCard({
             e.stopPropagation();
             setMenuOpen(!menuOpen);
           }}
-          className="p-1.5 rounded-md hover:bg-gray-100 transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-150 opacity-0 group-hover:opacity-100"
         >
           <MoreVertical className="w-4 h-4 text-gray-400" />
         </button>
@@ -224,27 +229,6 @@ function InfoRow({
   );
 }
 
-function StatusBadge({ published }: { published: boolean }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium",
-        published
-          ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
-          : "bg-amber-50 text-amber-600 border border-amber-200"
-      )}
-    >
-      <span
-        className={cn(
-          "w-1.5 h-1.5 rounded-full",
-          published ? "bg-emerald-500" : "bg-amber-500"
-        )}
-      />
-      {published ? "Published" : "Draft"}
-    </span>
-  );
-}
-
 function DropdownMenu({
   agentId,
   locationId,
@@ -257,11 +241,11 @@ function DropdownMenu({
   onClose: () => void;
 }) {
   return (
-    <div className="absolute right-0 top-full mt-1 w-36 rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20">
+    <div className="absolute right-0 top-full mt-1.5 w-40 rounded-xl border border-gray-200 bg-white shadow-lg py-1.5 z-20 animate-fade-in">
       <Link
         href={`/retell/${locationId}/agents/${agentId}/edit`}
         onClick={onClose}
-        className="flex items-center gap-2 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"
+        className="flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors rounded-lg mx-1"
       >
         <Pencil className="w-3.5 h-3.5 text-gray-400" />
         Edit
@@ -271,7 +255,8 @@ function DropdownMenu({
           onClose();
           onDelete();
         }}
-        className="flex items-center gap-2 px-3 py-2 text-[13px] text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+        className="flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-red-600 hover:bg-red-50 transition-colors w-full text-left rounded-lg mx-1"
+        style={{ width: "calc(100% - 8px)" }}
       >
         <Trash2 className="w-3.5 h-3.5" />
         Delete

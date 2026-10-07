@@ -157,7 +157,7 @@ export function SelectSetting({
       <select
         value={value}
         onChange={(e) => onSave(e.target.value)}
-        className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+        className="w-full px-3 py-2 rounded-lg border border-gray-200 text-[13px] text-gray-700 bg-white hover:border-gray-300 transition-all duration-150 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -276,7 +276,7 @@ export function NumberSetting({
           onChange={(e) => setLocal(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => e.key === "Enter" && commit()}
-          className="w-24 px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+          className="w-24 px-3 py-2 rounded-lg border border-gray-200 text-[13px] text-gray-700 bg-white hover:border-gray-300 transition-all duration-150 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
         />
         {suffix && <span className="text-[11px] text-gray-400">{suffix}</span>}
       </div>
@@ -330,7 +330,7 @@ export function TextSetting({
             setDirty(true);
           }}
           onBlur={commit}
-          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none"
+          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-[13px] text-gray-700 bg-white placeholder:text-gray-400 hover:border-gray-300 transition-all duration-150 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 resize-none"
         />
       ) : (
         <input
@@ -343,7 +343,7 @@ export function TextSetting({
           }}
           onBlur={commit}
           onKeyDown={(e) => e.key === "Enter" && commit()}
-          className="w-full px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-[13px] text-gray-700 bg-white placeholder:text-gray-400 hover:border-gray-300 transition-all duration-150 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
         />
       )}
     </div>
@@ -397,7 +397,7 @@ export function TagListSetting({
               addTag();
             }
           }}
-          className="flex-1 px-2.5 py-1.5 rounded-md border border-gray-200 text-[12px] text-gray-700 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+          className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-[13px] text-gray-700 bg-white placeholder:text-gray-400 hover:border-gray-300 transition-all duration-150 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
         />
         <button
           onClick={addTag}
