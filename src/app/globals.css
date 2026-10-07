@@ -114,3 +114,30 @@ input:focus, select:focus, textarea:focus {
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
+
+/* Filled range slider: track fill is drawn via inline gradient background */
+input[type="range"].range-fill {
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+input[type="range"].range-fill::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid var(--color-brand-500);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  transition: transform 120ms;
+}
+input[type="range"].range-fill::-webkit-slider-thumb:hover { transform: scale(1.1); }
+input[type="range"].range-fill::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid var(--color-brand-500);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+}

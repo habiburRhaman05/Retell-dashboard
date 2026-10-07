@@ -223,7 +223,14 @@ function SliderField({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 accent-brand-500"
+        style={{
+          background: `linear-gradient(to right, var(--color-brand-500) 0%, var(--color-brand-500) ${
+            max === min ? 0 : ((value - min) / (max - min)) * 100
+          }%, var(--color-gray-200) ${
+            max === min ? 0 : ((value - min) / (max - min)) * 100
+          }%, var(--color-gray-200) 100%)`,
+        }}
+        className="range-fill w-full h-2 rounded-full cursor-pointer"
       />
       <div className="flex justify-between mt-1">
         <span className="text-[10px] text-gray-400">{min}</span>

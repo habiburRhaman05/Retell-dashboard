@@ -107,7 +107,14 @@ export function SliderSetting({
           setLocal(parseFloat(e.target.value));
           setDirty(true);
         }}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-gray-200 accent-brand-500"
+        style={{
+          background: `linear-gradient(to right, var(--color-brand-500) 0%, var(--color-brand-500) ${
+            max === min ? 0 : ((local - min) / (max - min)) * 100
+          }%, var(--color-gray-200) ${
+            max === min ? 0 : ((local - min) / (max - min)) * 100
+          }%, var(--color-gray-200) 100%)`,
+        }}
+        className="range-fill w-full h-2 rounded-full cursor-pointer"
       />
     </div>
   );
