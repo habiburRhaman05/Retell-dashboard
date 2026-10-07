@@ -82,7 +82,7 @@ export default function OverviewPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1800px] mx-auto px-4 lg:px-6 py-8">
+      <div className="max-w-none mx-auto px-4 lg:px-6 py-8">
         <div className="h-10 w-64 bg-gray-100 rounded-lg animate-pulse mb-8" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[...Array(4)].map((_, i) => (
@@ -101,7 +101,7 @@ export default function OverviewPage() {
   }
 
   return (
-    <div className="max-w-[1800px] mx-auto px-4 lg:px-6 py-8 animate-fade-in">
+    <div className="max-w-none mx-auto px-4 lg:px-6 py-8 animate-fade-in">
       {/* Greeting header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">

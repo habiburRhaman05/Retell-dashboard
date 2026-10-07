@@ -223,7 +223,7 @@ export default function AgentDetailPage() {
     <div className="h-full flex flex-col">
       {/* Hero header */}
       <div className="bg-white border-b border-gray-200 px-4 lg:px-6 shrink-0">
-        <div className="max-w-[1200px] mx-auto pt-4 pb-4">
+        <div className="max-w-none mx-auto pt-4 pb-4">
           <div className="flex items-center gap-4">
             <Link
               href={`/retell/${locationId}/agents`}
@@ -313,7 +313,7 @@ export default function AgentDetailPage() {
 
       {/* Tabs */}
       <div className="bg-white border-b border-gray-200 px-4 lg:px-6 shrink-0">
-        <div className="max-w-[1200px] mx-auto flex items-center gap-1 overflow-x-auto" role="tablist">
+        <div className="max-w-none mx-auto flex items-center gap-1 overflow-x-auto" role="tablist">
           {TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.key;
@@ -347,7 +347,7 @@ export default function AgentDetailPage() {
 
       {/* Main content */}
       <div className="flex-1 overflow-y-auto bg-gray-50/70">
-        <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6">
+        <div className="max-w-none mx-auto px-4 lg:px-6 py-6">
           {tab === "prompt" && (
             <div className="space-y-4 animate-fade-in">
               <section className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">

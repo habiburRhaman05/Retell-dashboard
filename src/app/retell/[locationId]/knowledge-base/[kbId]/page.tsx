@@ -146,7 +146,7 @@ export default function KnowledgeBaseDetailPage() {
     <div className="h-full flex flex-col">
       {/* Hero header */}
       <div className="bg-white border-b border-gray-200 px-4 lg:px-6 shrink-0">
-        <div className="max-w-[1100px] mx-auto py-4 flex items-center gap-4">
+        <div className="max-w-none mx-auto py-4 flex items-center gap-4">
           <Link
             href={`/retell/${locationId}/knowledge-base`}
             className="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
@@ -193,7 +193,7 @@ export default function KnowledgeBaseDetailPage() {
 
       {/* Main content */}
       <div className="flex-1 overflow-y-auto bg-gray-50/70">
-        <div className="max-w-[1100px] mx-auto px-4 lg:px-6 py-6 space-y-5 animate-fade-in">
+        <div className="max-w-none mx-auto px-4 lg:px-6 py-6 space-y-5 animate-fade-in">
           {(kb.status === "in_progress" || kb.status === "refreshing_in_progress") && (
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
               <Loader2 className="w-4 h-4 text-amber-500 animate-spin shrink-0" />

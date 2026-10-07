@@ -259,7 +259,7 @@ export default function AgentsPage() {
   };
 
   return (
-    <div className="max-w-[1800px] mx-auto px-4 lg:px-6 py-8 animate-fade-in">
+    <div className="max-w-none mx-auto px-4 lg:px-6 py-8 animate-fade-in">
       <PageHeader
         title="Voice Agents"
         description="Manage your AI voice agents"

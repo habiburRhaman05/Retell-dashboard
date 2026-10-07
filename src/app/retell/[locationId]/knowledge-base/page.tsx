@@ -74,7 +74,7 @@ export default function KnowledgeBasePage() {
   };
 
   return (
-    <div className="max-w-[1800px] mx-auto px-4 lg:px-6 py-8 animate-fade-in">
+    <div className="max-w-none mx-auto px-4 lg:px-6 py-8 animate-fade-in">
       <PageHeader
         title="Knowledge Bases"
         description="Manage documents, text, and URLs your agents can reference"

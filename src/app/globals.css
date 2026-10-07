@@ -3,7 +3,7 @@
 @theme inline {
   /*
    * Brand ramp - sampled from the Bright AI Solutions host app
-   * (brand-500 = #C0392B, the exact pixel value of its active nav state).
+   * (brand-500 = #1D6BF3, the exact pixel value of its active nav state).
    * This is the ONE place the product's accent color is defined; every
    * `brand-*` utility class (bg-brand-500, text-brand-600, ring-brand-500/20,
    * etc.) derives from it. To re-theme the app, change only this block.
@@ -11,16 +11,16 @@
    * own `accent-*` utility (the CSS accent-color property, e.g. accent-brand-500
    * on a range input).
    */
-  --color-brand-50: #fdf3f2;
-  --color-brand-100: #fae7e5;
-  --color-brand-200: #f4ccc8;
-  --color-brand-300: #e9a29b;
-  --color-brand-400: #dc6c60;
-  --color-brand-500: #c0392b;
-  --color-brand-600: #a02f22;
-  --color-brand-700: #812318;
-  --color-brand-800: #6b1d14;
-  --color-brand-900: #541812;
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #5b9bf5;
+  --color-brand-500: #1d6bf3;
+  --color-brand-600: #1558d6;
+  --color-brand-700: #1246ad;
+  --color-brand-800: #103b8a;
+  --color-brand-900: #0d2f6e;
 
   --color-primary: var(--color-brand-500);
   --color-primary-hover: var(--color-brand-600);
@@ -42,7 +42,7 @@
   --color-warning-light: #fffbeb;
   /*
    * Destructive actions stay in a visibly different red than the brand
-   * color on purpose - brand-500 (#C0392B) and a standard alert red sit
+   * color on purpose - brand-500 (#1D6BF3) and a standard alert red sit
    * only ~6 degrees of hue apart, so "Delete" and "primary action" buttons
    * would be hard to tell apart on hue alone. danger is pushed cooler
    * (toward magenta) and more saturated to read as a distinct "stop" red,
