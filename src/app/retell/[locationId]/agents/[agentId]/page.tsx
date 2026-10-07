@@ -22,6 +22,8 @@ import { FunctionsEditor } from "@/components/agents/functions-editor";
 import { KnowledgeBaseSelector } from "@/components/agents/knowledge-base-selector";
 import { TestCallPanel } from "@/components/agents/test-call-panel";
 import { VersionHistoryPanel } from "@/components/agents/version-history-panel";
+import { InlineSelect } from "@/components/agents/inline-select";
+import { LLM_MODEL_OPTIONS, VOICE_OPTIONS, LANGUAGE_OPTIONS } from "@/lib/constants";
 import {
   ArrowLeft,
   Trash2,
@@ -41,6 +43,8 @@ import {
   Webhook,
   Database,
   Zap,
+  BrainCog,
+  Globe,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useCallback } from "react";
@@ -270,14 +274,34 @@ export default function AgentDetailPage() {
       {/* Info bar */}
       <div className="bg-gray-50 border-b border-gray-200 px-4 lg:px-6">
         <div className="max-w-[1800px] mx-auto flex items-center h-[40px] gap-6 text-[12px] text-gray-500 overflow-x-auto">
-          <span className="shrink-0">{llm?.model || "—"}</span>
+          {llm ? (
+            <InlineSelect
+              icon={BrainCog}
+              value={llm.model}
+              options={LLM_MODEL_OPTIONS}
+              searchable
+              isSaving={updateLlmMut.isPending}
+              onSave={(v) => handleUpdateLlm({ model: v })}
+            />
+          ) : (
+            <span className="shrink-0">—</span>
+          )}
           <span className="text-gray-300">|</span>
-          <span className="shrink-0 inline-flex items-center gap-1">
-            <Volume2 className="w-3 h-3" />
-            {agent.voice_id?.replace(/^(retell|cartesia|minimax|11labs|fish_audio|openai|inworld)-/, "")}
-          </span>
+          <InlineSelect
+            icon={Volume2}
+            value={agent.voice_id}
+            options={VOICE_OPTIONS}
+            isSaving={updateAgentMut.isPending}
+            onSave={(v) => handleUpdateAgent({ voice_id: v })}
+          />
           <span className="text-gray-300">|</span>
-          <span className="shrink-0">{agent.language || "en-US"}</span>
+          <InlineSelect
+            icon={Globe}
+            value={agent.language || "en-US"}
+            options={LANGUAGE_OPTIONS}
+            isSaving={updateAgentMut.isPending}
+            onSave={(v) => handleUpdateAgent({ language: v })}
+          />
           <span className="text-gray-300">|</span>
           <span className="shrink-0">Modified {timeAgo(agent.last_modification_timestamp)}</span>
         </div>
