@@ -105,10 +105,8 @@ export default function OverviewPage() {
       {/* Greeting header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-          {getGreeting()} <span className="text-gray-400 font-normal">&mdash;</span>{" "}
-          <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
-            Dashboard
-          </span>
+          {getGreeting()}
+          <span className="text-brand-500">.</span>
         </h1>
         <p className="text-sm text-gray-500 mt-1">
           Here&apos;s how your voice agents are performing
@@ -184,7 +182,7 @@ export default function OverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Recently Modified — spans 2 cols */}
+        {/* Recently Modified - spans 2 cols */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">

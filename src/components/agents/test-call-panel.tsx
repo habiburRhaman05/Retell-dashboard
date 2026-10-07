@@ -12,7 +12,7 @@ interface TranscriptLine {
   content: string;
 }
 
-// Loaded lazily in the browser only — the SDK touches WebRTC globals that
+// Loaded lazily in the browser only - the SDK touches WebRTC globals that
 // don't exist during SSR.
 type RetellWebClientInstance = {
   startCall: (config: {

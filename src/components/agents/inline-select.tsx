@@ -34,7 +34,7 @@ export function InlineSelect({
   const panelRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset the search box exactly when the dropdown transitions to open —
+  // Reset the search box exactly when the dropdown transitions to open.
   // adjusted during render per React's guidance, not in an effect.
   if (open !== wasOpen) {
     setWasOpen(open);
@@ -62,7 +62,7 @@ export function InlineSelect({
         setOpen(false);
       }
     }
-    // Scrolling the option list itself must not close the dropdown — only
+    // Scrolling the option list itself must not close the dropdown - only
     // reposition (or close, if the trigger button scrolled out of view)
     // when something OUTSIDE the panel scrolls.
     function handleScroll(e: Event) {
@@ -124,18 +124,18 @@ export function InlineSelect({
         onClick={() => setOpen(!open)}
         disabled={isSaving}
         className={cn(
-          "inline-flex items-center gap-1.5 px-2 py-1 -mx-2 -my-1 rounded-md transition-colors",
-          "hover:bg-gray-100 disabled:opacity-60",
-          open && "bg-gray-100"
+          "flex w-full items-center gap-2 h-9 px-3 rounded-lg border border-gray-200 bg-white text-[13px] text-gray-700 transition-all",
+          "hover:border-gray-300 hover:shadow-sm disabled:opacity-60",
+          open && "border-brand-400 ring-2 ring-brand-500/20"
         )}
       >
         {isSaving ? (
-          <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+          <Loader2 className="w-4 h-4 animate-spin shrink-0 text-brand-500" />
         ) : (
-          Icon && <Icon className="w-3 h-3 shrink-0" />
+          Icon && <Icon className="w-4 h-4 shrink-0 text-brand-500" />
         )}
-        <span>{currentLabel}</span>
-        <ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />
+        <span className="flex-1 text-left truncate">{currentLabel}</span>
+        <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
       </button>
 
       {open &&

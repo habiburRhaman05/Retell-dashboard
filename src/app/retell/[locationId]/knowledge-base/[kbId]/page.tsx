@@ -27,10 +27,12 @@ import {
   Plus,
   X,
   AlertTriangle,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import type { KnowledgeBaseSource } from "@/types/retell";
 
 export default function KnowledgeBaseDetailPage() {
@@ -75,7 +77,7 @@ export default function KnowledgeBaseDetailPage() {
 
   const handleAddSources = async () => {
     // Pick up anything typed into the Text/URL tab that wasn't explicitly
-    // "Added" yet — otherwise it silently vanishes on submit.
+    // "Added" yet - otherwise it silently vanishes on submit.
     const committed = sourcePanelRef.current?.commitPending() ?? newSources;
     const total = committed.files.length + committed.texts.length + committed.urls.length;
     if (total === 0) {
@@ -84,7 +86,7 @@ export default function KnowledgeBaseDetailPage() {
     }
     try {
       await addSourcesMut.mutateAsync(committed);
-      toast("Sources added — processing may take a moment", "success");
+      toast("Sources added. Processing may take a moment", "success");
       setNewSources({ files: [], texts: [], urls: [] });
       setShowAddPanel(false);
     } catch (err) {
@@ -112,8 +114,9 @@ export default function KnowledgeBaseDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
+      <div className="flex flex-col items-center justify-center gap-3 h-[60vh]">
         <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+        <p className="text-sm text-gray-500">Loading knowledge base...</p>
       </div>
     );
   }
@@ -135,94 +138,75 @@ export default function KnowledgeBaseDetailPage() {
   }
 
   const sources = kb.knowledge_base_sources || [];
+  const docCount = sources.filter((x) => x.type === "document").length;
+  const textCount = sources.filter((x) => x.type === "text").length;
+  const urlCount = sources.filter((x) => x.type === "url").length;
 
   return (
     <div className="h-full flex flex-col">
-      {/* Top bar */}
-      <div className="bg-white border-b border-gray-200 px-4 lg:px-6">
-        <div className="max-w-[1000px] mx-auto flex items-center h-[52px] gap-4">
+      {/* Hero header */}
+      <div className="bg-white border-b border-gray-200 px-4 lg:px-6 shrink-0">
+        <div className="max-w-[1100px] mx-auto py-4 flex items-center gap-4">
           <Link
             href={`/retell/${locationId}/knowledge-base`}
-            className="p-1.5 rounded-md hover:bg-gray-100 transition-colors shrink-0"
+            className="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+            aria-label="Back to knowledge bases"
           >
             <ArrowLeft className="w-4 h-4 text-gray-500" />
           </Link>
-
-          <h1 className="text-[15px] font-semibold text-gray-900 truncate">
-            {kb.knowledge_base_name}
-          </h1>
-
-          <div className="flex items-center gap-2 ml-2">
-            <StatusBadge status={kb.status} />
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center shadow-sm shrink-0">
+            <BookOpen className="w-5 h-5" />
           </div>
-
-          <div className="ml-auto flex items-center gap-2">
-            <button
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg font-semibold text-gray-900 truncate tracking-tight">
+                {kb.knowledge_base_name}
+              </h1>
+              <StatusBadge status={kb.status} />
+            </div>
+            <p className="text-[12px] text-gray-500 mt-0.5 font-mono truncate">
+              {kb.knowledge_base_id}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={Copy}
               onClick={copyId}
-              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-mono text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+              className="hidden sm:inline-flex font-mono"
             >
-              <Copy className="w-3 h-3" /> ID
-            </button>
-            <button
+              ID
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              icon={Trash2}
+              loading={deleteKbMut.isPending}
               onClick={handleDeleteKb}
-              disabled={deleteKbMut.isPending}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
             >
-              {deleteKbMut.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Trash2 className="w-3.5 h-3.5" />
-              )}
               <span className="hidden sm:inline">Delete</span>
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
-
-      {/* Info bar */}
-      <div className="bg-gray-50 border-b border-gray-200 px-4 lg:px-6">
-        <div className="max-w-[1000px] mx-auto flex items-center h-[40px] gap-6 text-[12px] text-gray-500 overflow-x-auto">
-          <span className="shrink-0">{sources.length} source{sources.length !== 1 ? "s" : ""}</span>
-          <span className="text-gray-300">|</span>
-          <span className="shrink-0">
-            Chunk size: {kb.min_chunk_size ?? 400}–{kb.max_chunk_size ?? 2000} chars
-          </span>
-          {kb.enable_auto_refresh && (
-            <>
-              <span className="text-gray-300">|</span>
-              <span className="shrink-0 inline-flex items-center gap-1">
-                <RefreshCw className="w-3 h-3" />
-                Auto-refresh enabled
-              </span>
-            </>
-          )}
-          {kb.last_refreshed_timestamp && (
-            <>
-              <span className="text-gray-300">|</span>
-              <span className="shrink-0">
-                Last refreshed {new Date(kb.last_refreshed_timestamp).toLocaleString()}
-              </span>
-            </>
-          )}
         </div>
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-[1000px] mx-auto px-4 lg:px-6 py-6">
+      <div className="flex-1 overflow-y-auto bg-gray-50/70">
+        <div className="max-w-[1100px] mx-auto px-4 lg:px-6 py-6 space-y-5 animate-fade-in">
           {(kb.status === "in_progress" || kb.status === "refreshing_in_progress") && (
-            <div className="mb-5 flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
               <Loader2 className="w-4 h-4 text-amber-500 animate-spin shrink-0" />
               <p className="text-[13px] text-amber-700">
                 {kb.status === "in_progress"
-                  ? "Processing sources — this page will update automatically when ready."
-                  : "Refreshing sources — this page will update automatically when done."}
+                  ? "Processing sources. This page will update automatically when ready."
+                  : "Refreshing sources. This page will update automatically when done."}
               </p>
             </div>
           )}
 
           {kb.status === "error" && (
-            <div className="mb-5 flex items-center gap-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
               <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
               <p className="text-[13px] text-red-700">
                 Something went wrong processing this knowledge base. Try removing the
@@ -231,45 +215,63 @@ export default function KnowledgeBaseDetailPage() {
             </div>
           )}
 
-          <div className="bg-white rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-              <h2 className="text-[13px] font-semibold text-gray-700">Sources</h2>
-              <button
+          {/* Summary tiles */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <SummaryTile icon={FileText} label="Files" value={String(docCount)} />
+            <SummaryTile icon={Type} label="Text entries" value={String(textCount)} />
+            <SummaryTile icon={Link2} label="URLs" value={String(urlCount)} />
+            <SummaryTile
+              icon={RefreshCw}
+              label="Auto-refresh"
+              value={kb.enable_auto_refresh ? "On" : "Off"}
+              hint={
+                kb.last_refreshed_timestamp
+                  ? `Last ${new Date(kb.last_refreshed_timestamp).toLocaleDateString()}`
+                  : `Chunks ${kb.min_chunk_size ?? 400}-${kb.max_chunk_size ?? 2000}`
+              }
+            />
+          </div>
+
+          <section className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-[14px] font-semibold text-gray-900">Sources</h2>
+                <p className="text-[12px] text-gray-500 mt-0.5">
+                  {sources.length} source{sources.length !== 1 ? "s" : ""} your agents can reference
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant={showAddPanel ? "secondary" : "primary"}
+                icon={showAddPanel ? X : Plus}
                 onClick={() => setShowAddPanel((v) => !v)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-500 text-white text-[12px] font-medium hover:bg-brand-600 transition-colors"
               >
-                {showAddPanel ? (
-                  <X className="w-3.5 h-3.5" />
-                ) : (
-                  <Plus className="w-3.5 h-3.5" />
-                )}
                 {showAddPanel ? "Cancel" : "Add Sources"}
-              </button>
+              </Button>
             </div>
 
             {showAddPanel && (
-              <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
+              <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/60 animate-fade-in">
                 <SourceInputPanel ref={sourcePanelRef} value={newSources} onChange={setNewSources} />
-                <div className="flex justify-end mt-3">
-                  <button
-                    onClick={handleAddSources}
+                <div className="flex justify-end mt-4">
+                  <Button
+                    loading={addSourcesMut.isPending}
                     disabled={addSourcesMut.isPending}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-500 text-white text-[13px] font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={handleAddSources}
                   >
-                    {addSourcesMut.isPending && (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    )}
                     {addSourcesMut.isPending ? "Uploading..." : "Add to Knowledge Base"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
 
             {sources.length === 0 ? (
-              <div className="py-12 text-center">
-                <FileText className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-500">No sources yet</p>
-                <p className="text-xs text-gray-400 mt-1">
+              <div className="py-14 text-center">
+                <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                  <FileText className="w-6 h-6 text-gray-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-700">No sources yet</p>
+                <p className="text-xs text-gray-500 mt-1">
                   Add files, text, or URLs for your agents to reference
                 </p>
               </div>
@@ -287,12 +289,33 @@ export default function KnowledgeBaseDetailPage() {
                 ))}
               </ul>
             )}
-          </div>
-
-          <div className="mt-4 text-center text-[11px] text-gray-400">
-            Knowledge base ID: <span className="font-mono">{kb.knowledge_base_id}</span>
-          </div>
+          </section>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SummaryTile({
+  icon: Icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 flex items-center gap-3">
+      <span className="w-9 h-9 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+        <Icon className="w-4 h-4" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+        <p className="text-lg font-semibold text-gray-900 leading-tight">{value}</p>
+        {hint && <p className="text-[11px] text-gray-400 truncate">{hint}</p>}
       </div>
     </div>
   );
@@ -318,9 +341,9 @@ function SourceRow({
   const Icon = icon;
 
   return (
-    <li className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors">
-      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-        <Icon className="w-4 h-4 text-gray-500" />
+    <li className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 transition-colors">
+      <div className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center shrink-0">
+        <Icon className="w-4 h-4 text-brand-600" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-medium text-gray-800 truncate">

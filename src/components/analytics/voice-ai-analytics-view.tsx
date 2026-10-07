@@ -53,12 +53,12 @@ export function VoiceAiAnalyticsView({ data }: { data: VoiceAiAnalyticsSummary }
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatTile
           label="Avg Tokens / Call"
-          value={data.tokenUsage.avgTokensPerCall?.toLocaleString() ?? "—"}
+          value={data.tokenUsage.avgTokensPerCall?.toLocaleString() ?? "-"}
         />
         <StatTile label="Total Cost" value={formatCents(data.cost.totalCostCents)} />
         <StatTile
           label="Avg Cost / Call"
-          value={data.cost.avgCostCentsPerCall !== null ? formatCents(data.cost.avgCostCentsPerCall) : "—"}
+          value={data.cost.avgCostCentsPerCall !== null ? formatCents(data.cost.avgCostCentsPerCall) : "-"}
         />
       </div>
 

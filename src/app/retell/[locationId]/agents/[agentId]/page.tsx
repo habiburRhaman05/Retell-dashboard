@@ -48,11 +48,23 @@ import {
   Zap,
   BrainCog,
   Globe,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { RetellLlm, PronunciationEntry, PostCallAnalysisItem, RetellLlmTool } from "@/types/retell";
+
+type TabKey = "prompt" | "voice" | "call" | "tools" | "analysis" | "advanced";
+
+const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: "prompt", label: "Prompt", icon: FileText },
+  { key: "voice", label: "Voice & Speech", icon: Mic },
+  { key: "call", label: "Call", icon: Phone },
+  { key: "tools", label: "Functions & Knowledge", icon: Zap },
+  { key: "analysis", label: "Analysis & Webhooks", icon: BarChart3 },
+  { key: "advanced", label: "Advanced", icon: Settings2 },
+];
 
 async function fetchJson<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, opts);
@@ -105,9 +117,10 @@ export default function AgentDetailPage() {
   const [beginMessage, setBeginMessage] = useState("");
   const [showTestCall, setShowTestCall] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
+  const [tab, setTab] = useState<TabKey>("prompt");
 
   // Sync local editor state whenever a *different* LLM loads (initial load,
-  // or navigating to another agent) — not on every background refetch, so
+  // or navigating to another agent) - not on every background refetch, so
   // in-progress edits aren't clobbered. This runs during render per React's
   // "adjusting state when a prop changes" guidance rather than in an effect.
   const [syncedLlmId, setSyncedLlmId] = useState<string | undefined>(undefined);
@@ -208,156 +221,206 @@ export default function AgentDetailPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Top bar */}
-      <div className="bg-white border-b border-gray-200 px-4 lg:px-6">
-        <div className="max-w-[1800px] mx-auto flex items-center h-14 gap-3">
-          <Link
-            href={`/retell/${locationId}/agents`}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
-            aria-label="Back to agents"
-          >
-            <ArrowLeft className="w-4 h-4 text-gray-500" />
-          </Link>
+      {/* Hero header */}
+      <div className="bg-white border-b border-gray-200 px-4 lg:px-6 shrink-0">
+        <div className="max-w-[1200px] mx-auto pt-4 pb-4">
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/retell/${locationId}/agents`}
+              className="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+              aria-label="Back to agents"
+            >
+              <ArrowLeft className="w-4 h-4 text-gray-500" />
+            </Link>
 
-          <h1 className="text-base font-semibold text-gray-900 truncate tracking-tight">
-            {agent.agent_name || "Unnamed Agent"}
-          </h1>
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-base font-semibold shadow-sm shrink-0">
+              {(agent.agent_name || "A").charAt(0).toUpperCase()}
+            </div>
 
-          <div className="flex items-center gap-2 ml-1">
-            <Badge variant={agent.is_published ? "success" : "warning"} dot>
-              {agent.is_published ? "Published" : "Draft"}
-            </Badge>
-            <span className="text-[11px] text-gray-400 font-medium">v{agent.version}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg font-semibold text-gray-900 truncate tracking-tight">
+                  {agent.agent_name || "Unnamed Agent"}
+                </h1>
+                <Badge variant={agent.is_published ? "success" : "warning"} dot>
+                  {agent.is_published ? "Published" : "Draft"}
+                </Badge>
+                <span className="text-[11px] text-gray-400 font-medium">v{agent.version}</span>
+              </div>
+              <p className="text-[12px] text-gray-500 mt-0.5">
+                Modified {timeAgo(agent.last_modification_timestamp)}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Button size="sm" icon={PhoneCall} onClick={() => setShowTestCall(true)}>
+                Test Call
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={History}
+                onClick={() => setShowVersions(true)}
+              >
+                <span className="hidden sm:inline">Versions & Publish</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={Copy}
+                onClick={copyId}
+                className="hidden md:inline-flex font-mono"
+              >
+                ID
+              </Button>
+              <Button size="sm" variant="danger" icon={Trash2} onClick={handleDelete}>
+                <span className="hidden sm:inline">Delete</span>
+              </Button>
+            </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            <Button size="sm" icon={PhoneCall} onClick={() => setShowTestCall(true)}>
-              Test Call
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              icon={History}
-              onClick={() => setShowVersions(true)}
-            >
-              <span className="hidden sm:inline">Versions & Publish</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={Copy}
-              onClick={copyId}
-              className="hidden sm:inline-flex font-mono"
-            >
-              ID
-            </Button>
-            <Button size="sm" variant="danger" icon={Trash2} onClick={handleDelete}>
-              <span className="hidden sm:inline">Delete</span>
-            </Button>
+          {/* Model / voice / language */}
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {llm ? (
+              <InlineSelect
+                icon={BrainCog}
+                value={llm.model}
+                options={LLM_MODEL_OPTIONS}
+                searchable
+                isSaving={updateLlmMut.isPending}
+                onSave={(v) => handleUpdateLlm({ model: v })}
+              />
+            ) : (
+              <div className="h-9 rounded-lg bg-gray-100 animate-pulse" />
+            )}
+            <InlineSelect
+              icon={Volume2}
+              value={agent.voice_id}
+              options={VOICE_OPTIONS}
+              isSaving={updateAgentMut.isPending}
+              onSave={(v) => handleUpdateAgent({ voice_id: v })}
+            />
+            <InlineSelect
+              icon={Globe}
+              value={agent.language || "en-US"}
+              options={LANGUAGE_OPTIONS}
+              isSaving={updateAgentMut.isPending}
+              onSave={(v) => handleUpdateAgent({ language: v })}
+            />
           </div>
         </div>
       </div>
 
-      {/* Info bar */}
-      <div className="bg-gray-50/80 border-b border-gray-200 px-4 lg:px-6">
-        <div className="max-w-[1800px] mx-auto flex items-center h-[42px] gap-6 text-[12px] text-gray-500 overflow-x-auto">
-          {llm ? (
-            <InlineSelect
-              icon={BrainCog}
-              value={llm.model}
-              options={LLM_MODEL_OPTIONS}
-              searchable
-              isSaving={updateLlmMut.isPending}
-              onSave={(v) => handleUpdateLlm({ model: v })}
-            />
-          ) : (
-            <span className="shrink-0">—</span>
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-200 px-4 lg:px-6 shrink-0">
+        <div className="max-w-[1200px] mx-auto flex items-center gap-1 overflow-x-auto" role="tablist">
+          {TABS.map((t) => {
+            const Icon = t.icon;
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "relative inline-flex items-center gap-2 px-3.5 h-11 text-[13px] font-medium whitespace-nowrap transition-colors",
+                  active ? "text-brand-600" : "text-gray-500 hover:text-gray-800"
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {t.label}
+                {active && (
+                  <span className="absolute left-2 right-2 -bottom-px h-0.5 rounded-full bg-brand-500" />
+                )}
+              </button>
+            );
+          })}
+          {(updateAgentMut.isPending || updateLlmMut.isPending) && (
+            <span className="ml-auto inline-flex items-center gap-1.5 text-[12px] text-brand-600 font-medium shrink-0">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Saving...
+            </span>
           )}
-          <span className="text-gray-300">|</span>
-          <InlineSelect
-            icon={Volume2}
-            value={agent.voice_id}
-            options={VOICE_OPTIONS}
-            isSaving={updateAgentMut.isPending}
-            onSave={(v) => handleUpdateAgent({ voice_id: v })}
-          />
-          <span className="text-gray-300">|</span>
-          <InlineSelect
-            icon={Globe}
-            value={agent.language || "en-US"}
-            options={LANGUAGE_OPTIONS}
-            isSaving={updateAgentMut.isPending}
-            onSave={(v) => handleUpdateAgent({ language: v })}
-          />
-          <span className="text-gray-300">|</span>
-          <span className="shrink-0">Modified {timeAgo(agent.last_modification_timestamp)}</span>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-hidden">
-        <div className="max-w-[1800px] mx-auto h-full flex flex-col lg:flex-row">
-          {/* Left: Prompt editor */}
-          <div className="flex-1 flex flex-col border-r border-gray-200 min-w-0">
-            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
-              <span className="text-[13px] font-semibold text-gray-700">
-                Agent Prompt
-              </span>
-              <button
-                onClick={handleSavePrompt}
-                disabled={!hasChanges || updateLlmMut.isPending}
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-                  hasChanges
-                    ? "bg-brand-500 text-white hover:bg-brand-600"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                )}
-              >
-                {updateLlmMut.isPending ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+      <div className="flex-1 overflow-y-auto bg-gray-50/70">
+        <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6">
+          {tab === "prompt" && (
+            <div className="space-y-4 animate-fade-in">
+              <section className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100">
+                  <span className="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-[14px] font-semibold text-gray-900">Agent prompt</h2>
+                    <p className="text-[12px] text-gray-500">
+                      Describe who the agent is, how it speaks and what it should do
+                    </p>
+                  </div>
+                  {hasChanges && (
+                    <Badge variant="warning" dot>
+                      Unsaved
+                    </Badge>
+                  )}
+                  <Button
+                    size="sm"
+                    icon={Save}
+                    loading={updateLlmMut.isPending}
+                    disabled={!hasChanges || updateLlmMut.isPending}
+                    onClick={handleSavePrompt}
+                  >
+                    Save
+                  </Button>
+                </div>
+                {llmLoading ? (
+                  <div className="h-[420px] flex items-center justify-center gap-2 text-gray-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-[12px]">Loading prompt...</span>
+                  </div>
                 ) : (
-                  <Save className="w-3 h-3" />
+                  <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="Enter the agent's system prompt..."
+                    spellCheck={false}
+                    className="block w-full h-[calc(100vh-480px)] min-h-[320px] px-5 py-4 text-[14px] text-gray-800 leading-relaxed resize-y focus:outline-none placeholder:text-gray-300"
+                  />
                 )}
-                Save
-              </button>
-            </div>
-            <div className="flex-1 overflow-auto bg-white">
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Enter the agent's system prompt..."
-                className="w-full h-full min-h-[300px] px-5 py-4 text-sm text-gray-800 leading-relaxed resize-none focus:outline-none placeholder:text-gray-300"
-              />
-            </div>
-            <div className="bg-white border-t border-gray-100 px-5 py-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-[12px] font-medium text-gray-600">
-                  Welcome Message
-                </span>
-                <span className="text-[11px] text-gray-400">
-                  {agent.response_engine?.type === "retell-llm"
-                    ? "AI speaks first"
-                    : ""}
-                </span>
-              </div>
-              <Input
-                type="text"
-                value={beginMessage}
-                onChange={(e) => setBeginMessage(e.target.value)}
-                placeholder="Hi, how can I help you today?"
-              />
-            </div>
-          </div>
+                <div className="flex items-center justify-between px-5 py-2 border-t border-gray-100 bg-gray-50/60 text-[11px] text-gray-400">
+                  <span>{prompt.length.toLocaleString()} characters</span>
+                  <span>~{Math.ceil(prompt.length / 4).toLocaleString()} tokens</span>
+                </div>
+              </section>
 
-          {/* Right: Settings panels */}
-          <div className="w-full lg:w-[380px] shrink-0 overflow-y-auto bg-gray-50/50 relative">
-            {(updateAgentMut.isPending || updateLlmMut.isPending) && (
-              <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 bg-brand-500 text-white text-[12px] font-medium shadow-sm">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Saving changes...
-              </div>
-            )}
-            <SettingsPanel icon={Mic} title="Speech settings" defaultOpen>
+              <section className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-[14px] font-semibold text-gray-900">Welcome message</h2>
+                  <span className="text-[11px] text-gray-400">
+                    Leave empty to let the caller speak first
+                  </span>
+                </div>
+                <Input
+                  type="text"
+                  value={beginMessage}
+                  onChange={(e) => setBeginMessage(e.target.value)}
+                  placeholder="Hi, how can I help you today?"
+                />
+                <p className="text-[11px] text-gray-400 mt-2">
+                  Saved together with the prompt using the Save button above.
+                </p>
+              </section>
+            </div>
+          )}
+
+          {tab === "voice" && (
+            <div className="space-y-4 animate-fade-in">
+            <SettingsPanel icon={Mic} title="Speech settings"
+              description="Voice delivery, pacing and interruption behavior"
+            >
               <SliderSetting
                 label="Voice Speed"
                 value={agent.voice_speed ?? 1}
@@ -427,7 +490,9 @@ export default function AgentDetailPage() {
               />
             </SettingsPanel>
 
-            <SettingsPanel icon={Radio} title="Realtime transcription">
+            <SettingsPanel icon={Radio} title="Realtime transcription"
+              description="How caller speech is cleaned and transcribed"
+            >
               <RadioGroupSetting
                 label="Denoising Mode"
                 value={agent.denoising_mode ?? "noise-cancellation"}
@@ -467,8 +532,13 @@ export default function AgentDetailPage() {
                 onSave={(v) => handleUpdateAgent({ boosted_keywords: v })}
               />
             </SettingsPanel>
-
-            <SettingsPanel icon={Phone} title="Call settings">
+            </div>
+          )}
+          {tab === "call" && (
+            <div className="space-y-4 animate-fade-in">
+            <SettingsPanel icon={Phone} title="Call settings"
+              description="Limits, voicemail, IVR and keypad handling"
+            >
               <SliderSetting
                 label="Max Call Duration (min)"
                 value={(agent.max_call_duration_ms ?? 3600000) / 60000}
@@ -685,8 +755,13 @@ export default function AgentDetailPage() {
                 </>
               )}
             </SettingsPanel>
-
-            <SettingsPanel icon={Zap} title="Functions">
+            </div>
+          )}
+          {tab === "tools" && (
+            <div className="space-y-4 animate-fade-in">
+            <SettingsPanel icon={Zap} title="Functions"
+              description="Tools the agent can call during a conversation"
+            >
               {llmLoading ? (
                 <div className="px-4 py-6 flex items-center justify-center gap-2 text-gray-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -701,7 +776,9 @@ export default function AgentDetailPage() {
               )}
             </SettingsPanel>
 
-            <SettingsPanel icon={BrainCircuit} title="Knowledge base & memory">
+            <SettingsPanel icon={BrainCircuit} title="Knowledge base & memory"
+              description="Reference content and caller memory"
+            >
               <ToggleSetting
                 label="Contact Memory Read"
                 description="Agent can read past interactions"
@@ -739,15 +816,22 @@ export default function AgentDetailPage() {
               </div>
             </SettingsPanel>
 
-            <SettingsPanel icon={Languages} title="Pronunciation">
+            <SettingsPanel icon={Languages} title="Pronunciation"
+              description="Custom pronunciations for names and terms"
+            >
               <PronunciationEditor
                 entries={(agent.pronunciation_dictionary ?? []) as PronunciationEntry[]}
                 isSaving={updateAgentMut.isPending}
                 onSave={(entries) => handleUpdateAgent({ pronunciation_dictionary: entries })}
               />
             </SettingsPanel>
-
-            <SettingsPanel icon={BarChart3} title="Post call extraction">
+            </div>
+          )}
+          {tab === "analysis" && (
+            <div className="space-y-4 animate-fade-in">
+            <SettingsPanel icon={BarChart3} title="Post call extraction"
+              description="Structured data pulled from each call"
+            >
               <PostCallAnalysisEditor
                 items={(agent.post_call_analysis_data ?? []) as PostCallAnalysisItem[]}
                 isSaving={updateAgentMut.isPending}
@@ -755,7 +839,9 @@ export default function AgentDetailPage() {
               />
             </SettingsPanel>
 
-            <SettingsPanel icon={Webhook} title="Webhook">
+            <SettingsPanel icon={Webhook} title="Webhook"
+              description="Send call events to your server"
+            >
               <TextSetting
                 label="Webhook URL"
                 value={agent.webhook_url || ""}
@@ -770,8 +856,13 @@ export default function AgentDetailPage() {
                 onSave={(v) => handleUpdateAgent({ webhook_events: v })}
               />
             </SettingsPanel>
-
-            <SettingsPanel icon={Database} title="Data & privacy">
+            </div>
+          )}
+          {tab === "advanced" && (
+            <div className="space-y-4 animate-fade-in">
+            <SettingsPanel icon={Database} title="Data & privacy"
+              description="Storage, retention and access"
+            >
               <SelectSetting
                 label="Data Storage"
                 value={agent.data_storage_setting ?? "everything"}
@@ -797,7 +888,9 @@ export default function AgentDetailPage() {
               />
             </SettingsPanel>
 
-            <SettingsPanel icon={Settings2} title="General">
+            <SettingsPanel icon={Settings2} title="General"
+              description="Identifiers for this agent"
+            >
               <div className="px-4 py-3 space-y-3">
                 <div>
                   <p className="text-[12px] text-gray-500 mb-1">Agent ID</p>
@@ -816,15 +909,17 @@ export default function AgentDetailPage() {
               </div>
             </SettingsPanel>
 
-            {/* Raw JSON collapsible */}
-            <SettingsPanel icon={Settings2} title="Raw Config">
+            <SettingsPanel icon={Settings2} title="Raw Config"
+              description="Full agent JSON, read only"
+            >
               <div className="p-3 overflow-auto max-h-[400px]">
                 <pre className="text-[11px] text-gray-500 font-mono whitespace-pre-wrap leading-relaxed">
                   {JSON.stringify(agent, null, 2)}
                 </pre>
               </div>
             </SettingsPanel>
-          </div>
+            </div>
+          )}
         </div>
       </div>
 

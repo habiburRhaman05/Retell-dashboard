@@ -17,7 +17,7 @@ export interface SourceInputValue {
 }
 
 /** Lets a parent force any text/URL the user typed but hadn't clicked
- * "Add" on yet into `value` right before submitting — otherwise a filled
+ * "Add" on yet into `value` right before submitting - otherwise a filled
  * form with an un-clicked Add button silently submits as zero sources. */
 export interface SourceInputPanelHandle {
   commitPending: () => SourceInputValue;

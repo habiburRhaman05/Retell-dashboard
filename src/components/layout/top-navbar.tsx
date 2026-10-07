@@ -59,19 +59,7 @@ export function TopNavbar() {
       <header className="bg-white border-b border-gray-200/80 shrink-0 sticky top-0 z-30">
         <div className="max-w-[1800px] mx-auto px-4 lg:px-6">
           <div className="flex items-center h-14">
-            <Link
-              href={`/retell/${locationId}/dashboard`}
-              className="flex items-center gap-2.5 mr-8 shrink-0"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-sm shadow-brand-500/20">
-                <Bot className="w-4.5 h-4.5 text-white" />
-              </div>
-              <span className="text-[15px] font-bold text-gray-900 hidden sm:inline tracking-tight">
-                Bright AI
-              </span>
-            </Link>
-
-            <nav className="hidden md:flex items-center gap-0.5 flex-1">
+            <nav className="hidden md:flex items-center gap-1 flex-1">
               {NAV_LINKS.map((link) => {
                 const href = link.href(locationId);
                 const isActive = link.exactMatch
@@ -85,11 +73,11 @@ export function TopNavbar() {
                     className={cn(
                       "relative px-3.5 py-2 text-[13px] font-medium rounded-lg transition-all duration-150 flex items-center gap-2",
                       isActive
-                        ? "text-brand-600 bg-brand-50/60"
-                        : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                        ? "text-white bg-brand-500 shadow-sm shadow-brand-500/25"
+                        : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                     )}
                   >
-                    <Icon className={cn("w-4 h-4", isActive ? "text-brand-500" : "text-gray-400")} />
+                    <Icon className={cn("w-4 h-4", isActive ? "text-white" : "text-gray-400")} />
                     {link.label}
                   </Link>
                 );
@@ -120,12 +108,7 @@ export function TopNavbar() {
           />
           <div className="absolute top-0 right-0 w-[280px] h-full bg-white shadow-2xl flex flex-col animate-slide-up">
             <div className="flex items-center justify-between px-5 h-14 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-                  <Bot className="w-3.5 h-3.5 text-white" />
-                </div>
-                <span className="text-sm font-bold text-gray-900">Bright AI</span>
-              </div>
+              <span className="text-sm font-semibold text-gray-900">Menu</span>
               <button
                 onClick={() => setMobileOpen(false)}
                 className="p-2 rounded-lg hover:bg-gray-100"
@@ -148,11 +131,11 @@ export function TopNavbar() {
                     className={cn(
                       "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150",
                       isActive
-                        ? "text-brand-600 bg-brand-50/60"
+                        ? "text-white bg-brand-500"
                         : "text-gray-600 hover:bg-gray-50"
                     )}
                   >
-                    <Icon className={cn("w-4.5 h-4.5", isActive ? "text-brand-500" : "text-gray-400")} />
+                    <Icon className={cn("w-4.5 h-4.5", isActive ? "text-white" : "text-gray-400")} />
                     {link.label}
                   </Link>
                 );

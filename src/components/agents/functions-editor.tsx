@@ -230,7 +230,7 @@ function ToolForm({
         setError(null);
         onSubmit(parsed as RetellLlmTool);
       } catch {
-        setError("Invalid JSON — check for missing commas or quotes");
+        setError("Invalid JSON - check for missing commas or quotes");
       }
       return;
     }
@@ -310,7 +310,7 @@ function ToolForm({
       return;
     }
 
-    // end_call, extract_dynamic_variable (kept simple — variables can be refined via Advanced JSON)
+    // end_call, extract_dynamic_variable (kept simple - variables can be refined via Advanced JSON)
     setError(null);
     onSubmit(base);
   };

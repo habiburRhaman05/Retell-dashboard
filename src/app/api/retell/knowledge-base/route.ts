@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Add at least one file, text entry, or URL — Retell requires a knowledge base to have a starting source",
+            "Add at least one file, text entry, or URL - Retell requires a knowledge base to have a starting source",
         },
         { status: 400 }
       );

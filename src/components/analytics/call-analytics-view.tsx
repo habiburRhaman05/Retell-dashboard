@@ -24,7 +24,7 @@ const STATUS = {
 };
 
 function formatDuration(ms: number | null): string {
-  if (ms === null) return "—";
+  if (ms === null) return "-";
   const totalSeconds = Math.round(ms / 1000);
   if (totalSeconds < 60) return `${totalSeconds}s`;
   const minutes = Math.floor(totalSeconds / 60);
@@ -44,7 +44,7 @@ export function CallAnalyticsView({ data }: { data: AnalyticsSummary }) {
       {data.truncated && (
         <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[12px] text-amber-700">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          This range has more calls than can be summarized at once — numbers
+          This range has more calls than can be summarized at once - numbers
           below reflect the first 10,000 calls. Narrow the date range for exact
           totals.
         </div>
@@ -55,7 +55,7 @@ export function CallAnalyticsView({ data }: { data: AnalyticsSummary }) {
         <StatTile label="Call Duration" value={formatDuration(data.avgDurationMs)} />
         <StatTile
           label="Call Latency"
-          value={data.avgLatencyMs !== null ? `${data.avgLatencyMs}ms` : "—"}
+          value={data.avgLatencyMs !== null ? `${data.avgLatencyMs}ms` : "-"}
         />
       </div>
 

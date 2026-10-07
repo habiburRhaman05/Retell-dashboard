@@ -47,12 +47,12 @@ export function CreateKnowledgeBaseModal({
     setNameError(null);
 
     // Pick up anything typed into the Text/URL tab that wasn't explicitly
-    // "Added" yet — otherwise it silently vanishes on submit.
+    // "Added" yet - otherwise it silently vanishes on submit.
     const committed = sourcePanelRef.current?.commitPending() ?? sources;
     const committedTotal = committed.files.length + committed.texts.length + committed.urls.length;
     if (committedTotal === 0) {
       setSourceError(
-        "Add at least one file, text entry, or URL — Retell requires a knowledge base to have a starting source"
+        "Add at least one file, text entry, or URL - Retell requires a knowledge base to have a starting source"
       );
       return;
     }

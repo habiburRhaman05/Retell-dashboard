@@ -29,7 +29,7 @@ function formatDateLabel(dateStr: string): string {
 }
 
 /** Measures the live rendered width of a container so the SVG's viewBox can
- * match it 1:1 — without this, `preserveAspectRatio="none"` stretching a
+ * match it 1:1 - without this, `preserveAspectRatio="none"` stretching a
  * fixed-width viewBox non-uniformly distorts text glyphs and strokes. */
 function useMeasuredWidth<T extends HTMLElement>(fallback: number) {
   const ref = useRef<T>(null);
@@ -88,7 +88,7 @@ export function LineAreaChart({
       ? `${linePath} L${points[points.length - 1].x.toFixed(2)},${baseline} L${points[0].x.toFixed(2)},${baseline} Z`
       : "";
 
-  // Space labels so neighboring text can't collide — cap how many fit based
+  // Space labels so neighboring text can't collide - cap how many fit based
   // on the measured container width rather than a fixed count.
   const minLabelSpacing = 82; // comfortable width for "Oct 6" .. "Sep 30"
   const maxLabels = Math.max(2, Math.floor((width || DEFAULT_WIDTH) / minLabelSpacing));

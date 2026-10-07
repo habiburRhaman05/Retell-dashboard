@@ -7,35 +7,45 @@ import { useState } from "react";
 export function SettingsPanel({
   icon: Icon,
   title,
-  defaultOpen = false,
+  description,
+  defaultOpen = true,
   children,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
+  description?: string;
   defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-gray-200 bg-white">
+    <section className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50/50 transition-colors"
+        aria-expanded={open}
+        className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-gray-50/60 transition-colors"
       >
-        <Icon className="w-4 h-4 text-gray-400 shrink-0" />
-        <span className="text-[13px] font-medium text-gray-700 flex-1">
-          {title}
+        <span className="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4" />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[14px] font-semibold text-gray-900">{title}</span>
+          {description && (
+            <span className="block text-[12px] text-gray-500 mt-0.5 truncate">
+              {description}
+            </span>
+          )}
         </span>
         <ChevronDown
           className={cn(
-            "w-4 h-4 text-gray-400 transition-transform",
+            "w-4 h-4 text-gray-400 transition-transform duration-200",
             open && "rotate-180"
           )}
         />
       </button>
-      {open && <div className="border-t border-gray-100">{children}</div>}
-    </div>
+      {open && <div className="border-t border-gray-100 py-1">{children}</div>}
+    </section>
   );
 }
 
@@ -65,9 +75,9 @@ export function SliderSetting({
   }
 
   return (
-    <div className="px-4 py-3 border-t border-gray-50 first:border-0">
+    <div className="px-5 py-3.5 border-t border-gray-50 first:border-0">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[12px] text-gray-600">{label}</span>
+        <span className="text-[13px] font-medium text-gray-700">{label}</span>
         <div className="flex items-center gap-2">
           <span className="text-[12px] font-mono text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded min-w-[36px] text-center">
             {Number.isInteger(step * 10) && step < 1
@@ -97,7 +107,7 @@ export function SliderSetting({
           setLocal(parseFloat(e.target.value));
           setDirty(true);
         }}
-        className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 accent-brand-500"
+        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-gray-200 accent-brand-500"
       />
     </div>
   );
@@ -115,9 +125,9 @@ export function ToggleSetting({
   onSave: (v: boolean) => void;
 }) {
   return (
-    <div className="px-4 py-3 border-t border-gray-50 first:border-0 flex items-center justify-between gap-3">
+    <div className="px-5 py-3.5 border-t border-gray-50 first:border-0 flex items-center justify-between gap-3">
       <div>
-        <p className="text-[12px] text-gray-600">{label}</p>
+        <p className="text-[13px] font-medium text-gray-700">{label}</p>
         {description && (
           <p className="text-[11px] text-gray-400 mt-0.5">{description}</p>
         )}
@@ -125,14 +135,14 @@ export function ToggleSetting({
       <button
         onClick={() => onSave(!value)}
         className={cn(
-          "relative w-9 h-5 rounded-full transition-colors shrink-0",
+          "relative w-10 h-6 rounded-full transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-brand-500/30",
           value ? "bg-brand-500" : "bg-gray-300"
         )}
       >
         <span
           className={cn(
-            "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform",
-            value ? "left-[18px]" : "left-0.5"
+            "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all",
+            value ? "left-[22px]" : "left-1"
           )}
         />
       </button>
@@ -152,8 +162,8 @@ export function SelectSetting({
   onSave: (v: string) => void;
 }) {
   return (
-    <div className="px-4 py-3 border-t border-gray-50 first:border-0">
-      <p className="text-[12px] text-gray-600 mb-1.5">{label}</p>
+    <div className="px-5 py-3.5 border-t border-gray-50 first:border-0">
+      <p className="text-[13px] font-medium text-gray-700 mb-1.5">{label}</p>
       <select
         value={value}
         onChange={(e) => onSave(e.target.value)}
@@ -183,8 +193,8 @@ export function RadioGroupSetting({
   onSave: (v: string) => void;
 }) {
   return (
-    <div className="px-4 py-3 border-t border-gray-50 first:border-0">
-      <p className="text-[12px] text-gray-600">{label}</p>
+    <div className="px-5 py-3.5 border-t border-gray-50 first:border-0">
+      <p className="text-[13px] font-medium text-gray-700">{label}</p>
       {description && (
         <p className="text-[11px] text-gray-400 mt-0.5 mb-2">{description}</p>
       )}
@@ -262,8 +272,8 @@ export function NumberSetting({
   };
 
   return (
-    <div className="px-4 py-3 border-t border-gray-50 first:border-0">
-      <p className="text-[12px] text-gray-600">{label}</p>
+    <div className="px-5 py-3.5 border-t border-gray-50 first:border-0">
+      <p className="text-[13px] font-medium text-gray-700">{label}</p>
       {description && (
         <p className="text-[11px] text-gray-400 mt-0.5 mb-1.5">{description}</p>
       )}
@@ -315,8 +325,8 @@ export function TextSetting({
   };
 
   return (
-    <div className="px-4 py-3 border-t border-gray-50 first:border-0">
-      <p className="text-[12px] text-gray-600 mb-1.5">{label}</p>
+    <div className="px-5 py-3.5 border-t border-gray-50 first:border-0">
+      <p className="text-[13px] font-medium text-gray-700 mb-1.5">{label}</p>
       {description && (
         <p className="text-[11px] text-gray-400 -mt-1 mb-1.5">{description}</p>
       )}
@@ -380,8 +390,8 @@ export function TagListSetting({
   };
 
   return (
-    <div className="px-4 py-3 border-t border-gray-50 first:border-0">
-      <p className="text-[12px] text-gray-600">{label}</p>
+    <div className="px-5 py-3.5 border-t border-gray-50 first:border-0">
+      <p className="text-[13px] font-medium text-gray-700">{label}</p>
       {description && (
         <p className="text-[11px] text-gray-400 mt-0.5 mb-1.5">{description}</p>
       )}

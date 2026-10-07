@@ -435,7 +435,7 @@ export interface KnowledgeBase {
   knowledge_base_id: string;
   knowledge_base_name: string;
   status: KnowledgeBaseStatus;
-  // Only present in the response when explicitly set on create — Retell
+  // Only present in the response when explicitly set on create - Retell
   // does not echo back its own defaults.
   max_chunk_size?: number;
   min_chunk_size?: number;

@@ -2,7 +2,7 @@
 
 @theme inline {
   /*
-   * Brand ramp — sampled from the Bright AI Solutions host app
+   * Brand ramp - sampled from the Bright AI Solutions host app
    * (brand-500 = #C0392B, the exact pixel value of its active nav state).
    * This is the ONE place the product's accent color is defined; every
    * `brand-*` utility class (bg-brand-500, text-brand-600, ring-brand-500/20,
@@ -42,7 +42,7 @@
   --color-warning-light: #fffbeb;
   /*
    * Destructive actions stay in a visibly different red than the brand
-   * color on purpose — brand-500 (#C0392B) and a standard alert red sit
+   * color on purpose - brand-500 (#C0392B) and a standard alert red sit
    * only ~6 degrees of hue apart, so "Delete" and "primary action" buttons
    * would be hard to tell apart on hue alone. danger is pushed cooler
    * (toward magenta) and more saturated to read as a distinct "stop" red,
