@@ -24,7 +24,8 @@ import { TestCallPanel } from "@/components/agents/test-call-panel";
 import { TestChatPanel } from "@/components/agents/test-chat-panel";
 import { VersionHistoryPanel } from "@/components/agents/version-history-panel";
 import { InlineSelect } from "@/components/agents/inline-select";
-import { WorkflowEditor } from "@/components/agents/workflow-editor";
+import { WorkflowEditor, type WorkflowEditorHandle } from "@/components/agents/workflow-editor";
+import { SaveButton } from "@/components/agents/save-button";
 import { useAgentFlow, useUpdateAgentFlow } from "@/hooks/use-agent-flow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,6 @@ import {
   ArrowLeft,
   Trash2,
   Copy,
-  Save,
   Phone,
   BarChart3,
   BrainCircuit,
@@ -59,7 +59,7 @@ import {
   Clock,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { RetellLlm, PronunciationEntry, PostCallAnalysisItem, RetellLlmTool } from "@/types/retell";
 
@@ -156,6 +156,8 @@ export default function AgentDetailPage() {
   const [showVersions, setShowVersions] = useState(false);
   const [showTestChat, setShowTestChat] = useState(false);
   const [tab, setTab] = useState<TabKey>("prompt");
+  const flowRef = useRef<WorkflowEditorHandle>(null);
+  const [flowDirty, setFlowDirty] = useState(false);
 
   // Sync local editor state whenever a *different* LLM loads (initial load,
   // or navigating to another agent) - not on every background refetch, so
@@ -193,6 +195,42 @@ export default function AgentDetailPage() {
       toast(err instanceof Error ? err.message : "Failed to save prompt", "error");
     }
   }, [llmId, prompt, beginMessage, startSpeaker, messageMode, updateLlmMut, toast]);
+
+  // One Save button in the header covers whichever editor is on screen: the
+  // prompt and welcome message, or the workflow canvas for flow agents.
+  const dirty = isFlow ? flowDirty : hasChanges;
+  const saving = isFlow ? updateFlowMut.isPending : updateLlmMut.isPending;
+  const saveCurrent = () => {
+    if (!dirty || saving) return;
+    if (isFlow) void flowRef.current?.save();
+    else void handleSavePrompt();
+  };
+  const saveRef = useRef(saveCurrent);
+  useEffect(() => {
+    saveRef.current = saveCurrent;
+  });
+
+  // Ctrl/Cmd+S saves, and leaving the page with unsaved edits asks first.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
 
   const handleUpdateAgent = useCallback(
     async (data: Record<string, unknown>) => {
@@ -353,8 +391,14 @@ export default function AgentDetailPage() {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              <SaveButton dirty={dirty} saving={saving} onClick={saveCurrent} />
               {!isChat && (
-                <Button size="sm" icon={PhoneCall} onClick={() => setShowTestCall(true)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={PhoneCall}
+                  onClick={() => setShowTestCall(true)}
+                >
                   Test Call
                 </Button>
               )}
@@ -499,6 +543,8 @@ export default function AgentDetailPage() {
               )}
               {flow && (
                 <WorkflowEditor
+                  ref={flowRef}
+                  onDirtyChange={setFlowDirty}
                   flow={flow}
                   isSaving={updateFlowMut.isPending}
                   onSave={async (patch) => {
@@ -525,18 +571,9 @@ export default function AgentDetailPage() {
                   </div>
                   {hasChanges && (
                     <Badge variant="warning" dot>
-                      Unsaved
+                      Unsaved changes
                     </Badge>
                   )}
-                  <Button
-                    size="sm"
-                    icon={Save}
-                    loading={updateLlmMut.isPending}
-                    disabled={!hasChanges || updateLlmMut.isPending}
-                    onClick={handleSavePrompt}
-                  >
-                    Save
-                  </Button>
                 </div>
                 {llmLoading ? (
                   <div className="h-[420px] flex items-center justify-center gap-2 text-gray-400">
@@ -562,7 +599,7 @@ export default function AgentDetailPage() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-[14px] font-semibold text-gray-900">Welcome message</h2>
                   <span className="text-[11px] text-gray-400">
-                    Saved with the prompt using the Save button above
+                    Saved with the prompt using Save at the top
                   </span>
                 </div>
 

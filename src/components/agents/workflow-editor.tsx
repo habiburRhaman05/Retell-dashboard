@@ -2,7 +2,7 @@
 
 import "@xyflow/react/dist/style.css";
 
-import { useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -33,7 +33,6 @@ import {
   PhoneOff,
   StickyNote,
   Trash2,
-  Save,
   Undo2,
   Workflow as WorkflowIcon,
   Settings2,
@@ -172,15 +171,24 @@ export interface WorkflowEditorProps {
   flow: ConversationFlowData;
   isSaving: boolean;
   onSave: (patch: Record<string, unknown>) => Promise<void>;
+  /** Reports whether there are unsaved changes, so the page header can show it. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function WorkflowEditor(props: WorkflowEditorProps) {
-  return (
-    <ReactFlowProvider>
-      <WorkflowEditorInner {...props} />
-    </ReactFlowProvider>
-  );
+export interface WorkflowEditorHandle {
+  save: () => Promise<void>;
+  discard: () => void;
 }
+
+export const WorkflowEditor = forwardRef<WorkflowEditorHandle, WorkflowEditorProps>(
+  function WorkflowEditor(props, ref) {
+    return (
+      <ReactFlowProvider>
+        <WorkflowEditorInner {...props} handleRef={ref} />
+      </ReactFlowProvider>
+    );
+  }
+);
 
 function buildPatch(s: {
   nodes: FlowNodeData[];
@@ -217,7 +225,13 @@ function initialState(flow: ConversationFlowData) {
   };
 }
 
-function WorkflowEditorInner({ flow, isSaving, onSave }: WorkflowEditorProps) {
+function WorkflowEditorInner({
+  flow,
+  isSaving,
+  onSave,
+  onDirtyChange,
+  handleRef,
+}: WorkflowEditorProps & { handleRef: React.ForwardedRef<WorkflowEditorHandle> }) {
   const init = initialState(flow);
   const [nodes, setNodes] = useState<FlowNodeData[]>(init.nodes);
   const [notes, setNotes] = useState<FlowNoteData[]>(init.notes);
@@ -247,6 +261,10 @@ function WorkflowEditorInner({ flow, isSaving, onSave }: WorkflowEditorProps) {
     modelChoice: flow.model_choice,
   });
   const dirty = JSON.stringify(current) !== baseline;
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   // Adopt a newer version from Retell, but never overwrite unsaved edits.
   const flowKey = `${flow.conversation_flow_id}:${flow.version}:${flow.last_modification_timestamp}`;
@@ -417,6 +435,8 @@ function WorkflowEditorInner({ flow, isSaving, onSave }: WorkflowEditorProps) {
     }
   };
 
+  useImperativeHandle(handleRef, () => ({ save, discard }));
+
   const modelOptions = LLM_MODEL_OPTIONS.map((o) => ({ ...o, icon: modelIcon(o.value) }));
   if (!modelOptions.some((o) => o.value === model)) {
     modelOptions.unshift({ value: model, label: model, group: "Current", icon: modelIcon(model) } as never);
@@ -488,20 +508,19 @@ function WorkflowEditorInner({ flow, isSaving, onSave }: WorkflowEditorProps) {
               >
                 Auto layout
               </Button>
-              {dirty && (
-                <Button size="sm" variant="ghost" icon={Undo2} onClick={discard} disabled={isSaving}>
-                  Discard
-                </Button>
+              {dirty ? (
+                <>
+                  <span className="inline-flex items-center gap-1.5 px-2 text-[12px] font-medium text-amber-700">
+                    <span className="h-2 w-2 rounded-full bg-amber-400" />
+                    Unsaved changes
+                  </span>
+                  <Button size="sm" variant="ghost" icon={Undo2} onClick={discard} disabled={isSaving}>
+                    Discard
+                  </Button>
+                </>
+              ) : (
+                <span className="px-2 text-[12px] text-gray-400">All changes saved</span>
               )}
-              <Button
-                size="sm"
-                icon={Save}
-                loading={isSaving}
-                disabled={!dirty || isSaving}
-                onClick={save}
-              >
-                {dirty ? "Save workflow" : "Saved"}
-              </Button>
             </div>
           </Panel>
         </ReactFlow>
