@@ -1,8 +1,9 @@
 import { z } from "zod";
 
 export const responseEngineSchema = z.object({
-  type: z.enum(["retell-llm", "custom-llm", "retell-llm-multi-agent"]),
+  type: z.enum(["retell-llm", "custom-llm", "retell-llm-multi-agent", "conversation-flow"]),
   llm_id: z.string().optional(),
+  conversation_flow_id: z.string().optional(),
   url: z.string().url().optional(),
   version: z.number().optional(),
 });
@@ -15,7 +16,7 @@ export const createAgentSchema = z.object({
   voice_speed: z.number().min(0.5).max(2.0).optional(),
   voice_temperature: z.number().min(0).max(2.0).optional(),
   volume: z.number().min(0).max(2.0).optional(),
-  language: z.string().optional(),
+  language: z.union([z.string(), z.array(z.string())]).optional(),
   webhook_url: z.string().url().optional().or(z.literal("")),
 });
 

@@ -141,3 +141,6 @@ input[type="range"].range-fill::-moz-range-thumb {
   border: 2px solid var(--color-brand-500);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
 }
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

@@ -3,12 +3,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createAgentSchema, type CreateAgentFormData } from "@/lib/validators";
-import {
-  VOICE_OPTIONS,
-  VOICE_MODEL_OPTIONS,
-  LANGUAGE_OPTIONS,
-  DEFAULTS,
-} from "@/lib/constants";
+import { VOICE_MODEL_OPTIONS, DEFAULTS } from "@/lib/constants";
+import { VoiceField, LanguageField } from "@/components/agents/voice-language-fields";
 import type { RetellAgent } from "@/types/retell";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
@@ -50,7 +46,7 @@ export function AgentForm({
       : {
           agent_name: "",
           response_engine: { type: "retell-llm" },
-          voice_id: VOICE_OPTIONS[0].value,
+          voice_id: "retell-Cimo",
           voice_speed: DEFAULTS.voiceSpeed,
           voice_temperature: DEFAULTS.voiceTemperature,
           volume: DEFAULTS.volume,
@@ -78,24 +74,11 @@ export function AgentForm({
         </FormField>
 
         <FormField label="Voice" error={errors.voice_id?.message} required>
-          <select {...register("voice_id")} className={inputClass}>
-            {VOICE_OPTIONS.map((v) => (
-              <option key={v.value} value={v.value}>
-                {v.label}
-              </option>
-            ))}
-          </select>
+          <VoiceField value={watch("voice_id")} onSave={(v) => setValue("voice_id", v, { shouldDirty: true })} />
         </FormField>
 
         <FormField label="Language">
-          <select {...register("language")} className={inputClass}>
-            <option value="">Select language...</option>
-            {LANGUAGE_OPTIONS.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
-              </option>
-            ))}
-          </select>
+          <LanguageField value={watch("language")} onSave={(v) => setValue("language", v, { shouldDirty: true })} />
         </FormField>
       </FormSection>
 

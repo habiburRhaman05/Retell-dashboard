@@ -1,6 +1,7 @@
 export interface RetellResponseEngine {
-  type: "retell-llm" | "custom-llm" | "retell-llm-multi-agent";
+  type: "retell-llm" | "custom-llm" | "retell-llm-multi-agent" | "conversation-flow";
   llm_id?: string;
+  conversation_flow_id?: string;
   url?: string;
   version?: number;
 }
@@ -90,7 +91,7 @@ export interface RetellAgent {
   reminder_max_count: number;
   ambient_sound: string | null;
   ambient_sound_volume: number;
-  language: string | null;
+  language: string | string[] | null;
   timezone?: string | null;
   channel?: "voice" | "phone" | "web" | string;
   webhook_url: string | null;
@@ -141,7 +142,7 @@ export interface CreateAgentPayload {
   voice_speed?: number;
   voice_temperature?: number;
   volume?: number;
-  language?: string;
+  language?: string | string[];
   webhook_url?: string;
   assigned_tags?: string[];
 }
@@ -451,4 +452,18 @@ export interface KnowledgeBase {
 export interface KnowledgeBaseTextInput {
   title: string;
   text: string;
+}
+
+export interface RetellVoice {
+  voice_id: string;
+  voice_name: string;
+  provider: string;
+  gender?: string;
+  accent?: string;
+  age?: string;
+  avatar_url?: string | null;
+  preview_audio_url?: string | null;
+  recommended?: boolean;
+  voice_type?: string;
+  standard_voice_type?: string;
 }

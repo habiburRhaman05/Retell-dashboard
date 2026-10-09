@@ -26,7 +26,8 @@ import {
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
+import { languagesLabel } from "@/lib/languages";
+import { CreateAgentModal } from "@/components/agents/create-agent-modal";
 import type { RetellAgent } from "@/types/retell";
 
 function getVoiceLabel(agent: RetellAgent): string {
@@ -180,7 +181,7 @@ function ImportModal({
                           Voice: {getVoiceLabel(agent)}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {agent.language || "en-US"}
+                          {languagesLabel(agent.language)}
                         </span>
                       </div>
                     </div>
@@ -225,6 +226,7 @@ export default function AgentsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "modified">("modified");
   const [showImport, setShowImport] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
 
   const filteredAgents = useMemo(() => {
     if (!agents) return [];
@@ -273,9 +275,9 @@ export default function AgentsPage() {
             >
               Import Agents
             </Button>
-            <Link href={`/retell/${locationId}/agents/new`}>
-              <Button icon={Plus}>Create Agent</Button>
-            </Link>
+            <Button icon={Plus} onClick={() => setShowCreate(true)}>
+              Create Agent
+            </Button>
           </>
         }
       />
@@ -385,6 +387,10 @@ export default function AgentsPage() {
           Showing {filteredAgents.length} of {agents.length} agent
           {agents.length !== 1 ? "s" : ""}
         </div>
+      )}
+
+      {showCreate && (
+        <CreateAgentModal locationId={locationId} onClose={() => setShowCreate(false)} />
       )}
 
       {showImport && (

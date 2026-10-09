@@ -15,6 +15,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { languagesLabel } from "@/lib/languages";
 
 const ACCENT_COLORS = [
   "from-brand-500 to-brand-700",
@@ -104,7 +105,7 @@ export function AgentCard({
             {agent.language && (
               <span className="inline-flex items-center gap-1.5">
                 <Globe className="w-3.5 h-3.5 text-gray-400" />
-                {agent.language}
+                {languagesLabel(agent.language)}
               </span>
             )}
             <span className="inline-flex items-center gap-1.5 text-gray-400">
@@ -165,7 +166,7 @@ export function AgentCard({
         <div className="space-y-2.5 mb-4">
           <InfoRow icon={Volume2} label="Voice" value={getVoiceLabel(agent.voice_id)} />
           {agent.language && (
-            <InfoRow icon={Globe} label="Language" value={agent.language} />
+            <InfoRow icon={Globe} label="Language" value={languagesLabel(agent.language)} />
           )}
           <InfoRow
             icon={Clock}

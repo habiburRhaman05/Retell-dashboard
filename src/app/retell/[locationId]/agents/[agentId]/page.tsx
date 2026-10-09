@@ -21,18 +21,19 @@ import { PostCallAnalysisEditor } from "@/components/agents/post-call-analysis-e
 import { FunctionsEditor } from "@/components/agents/functions-editor";
 import { KnowledgeBaseSelector } from "@/components/agents/knowledge-base-selector";
 import { TestCallPanel } from "@/components/agents/test-call-panel";
+import { TestChatPanel } from "@/components/agents/test-chat-panel";
 import { VersionHistoryPanel } from "@/components/agents/version-history-panel";
 import { InlineSelect } from "@/components/agents/inline-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LLM_MODEL_OPTIONS, VOICE_OPTIONS, LANGUAGE_OPTIONS } from "@/lib/constants";
+import { LLM_MODEL_OPTIONS } from "@/lib/constants";
+import { VoiceField, LanguageField } from "@/components/agents/voice-language-fields";
 import {
   ArrowLeft,
   Trash2,
   Copy,
   Save,
-  Volume2,
   Phone,
   BarChart3,
   BrainCircuit,
@@ -47,8 +48,8 @@ import {
   Database,
   Zap,
   BrainCog,
-  Globe,
   FileText,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useCallback } from "react";
@@ -117,6 +118,7 @@ export default function AgentDetailPage() {
   const [beginMessage, setBeginMessage] = useState("");
   const [showTestCall, setShowTestCall] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
+  const [showTestChat, setShowTestChat] = useState(false);
   const [tab, setTab] = useState<TabKey>("prompt");
 
   // Sync local editor state whenever a *different* LLM loads (initial load,
@@ -153,8 +155,10 @@ export default function AgentDetailPage() {
         await updateAgentMut.mutateAsync({ agentId, data });
         queryClient.invalidateQueries({ queryKey: ["agent", agentId] });
         toast("Settings saved", "success");
+        return true;
       } catch (err) {
         toast(err instanceof Error ? err.message : "Failed to save settings", "error");
+        return false;
       }
     },
     [agentId, updateAgentMut, queryClient, toast]
@@ -259,6 +263,14 @@ export default function AgentDetailPage() {
               <Button
                 size="sm"
                 variant="secondary"
+                icon={MessageSquare}
+                onClick={() => setShowTestChat(true)}
+              >
+                <span className="hidden sm:inline">Test LLM</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
                 icon={History}
                 onClick={() => setShowVersions(true)}
               >
@@ -293,17 +305,13 @@ export default function AgentDetailPage() {
             ) : (
               <div className="h-9 rounded-lg bg-gray-100 animate-pulse" />
             )}
-            <InlineSelect
-              icon={Volume2}
+            <VoiceField
               value={agent.voice_id}
-              options={VOICE_OPTIONS}
               isSaving={updateAgentMut.isPending}
               onSave={(v) => handleUpdateAgent({ voice_id: v })}
             />
-            <InlineSelect
-              icon={Globe}
-              value={agent.language || "en-US"}
-              options={LANGUAGE_OPTIONS}
+            <LanguageField
+              value={agent.language}
               isSaving={updateAgentMut.isPending}
               onSave={(v) => handleUpdateAgent({ language: v })}
             />
@@ -929,6 +937,15 @@ export default function AgentDetailPage() {
           agentName={agent.agent_name || ""}
           locationId={locationId}
           onClose={() => setShowTestCall(false)}
+        />
+      )}
+
+      {showTestChat && (
+        <TestChatPanel
+          agentId={agentId}
+          agentName={agent.agent_name || ""}
+          locationId={locationId}
+          onClose={() => setShowTestChat(false)}
         />
       )}
 

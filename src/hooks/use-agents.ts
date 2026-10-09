@@ -114,3 +114,27 @@ export function useImportAgents(locationId: string) {
     },
   });
 }
+
+export interface CreateAgentFromTemplateInput {
+  name: string;
+  type: "single" | "flow";
+  templateId?: string | null;
+  businessName?: string;
+  voiceId: string;
+  language: string | string[];
+}
+
+export function useCreateAgentFromTemplate(locationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateAgentFromTemplateInput) =>
+      fetchJson<RetellAgent>("/api/retell/agents/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, locationId }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agents", locationId] });
+    },
+  });
+}

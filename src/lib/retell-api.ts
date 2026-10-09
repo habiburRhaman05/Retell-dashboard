@@ -6,6 +6,7 @@ import type {
   ListVersionsResponse,
   KnowledgeBase,
   CreateWebCallResponse,
+  RetellVoice,
   ListCallsRequest,
   ListCallsResponse,
 } from "@/types/retell";
@@ -225,5 +226,149 @@ export async function deleteKnowledgeBaseSource(
   return retellFetch<KnowledgeBase>(
     `/delete-knowledge-base-source/${knowledgeBaseId}/source/${sourceId}`,
     { method: "DELETE" }
+  );
+}
+
+export interface ChatMessage {
+  message_id?: string;
+  role: string;
+  content?: string;
+  name?: string;
+  arguments?: string;
+  result?: string;
+  [key: string]: unknown;
+}
+
+export async function createChat(
+  voiceAgentId: string,
+  dynamicVariables?: Record<string, string>
+): Promise<{ chat_id: string; chat_status: string }> {
+  const chatAgentId = await getOrCreateTestChatAgent(voiceAgentId);
+  return retellFetch("/create-chat", {
+    method: "POST",
+    body: JSON.stringify({
+      agent_id: chatAgentId,
+      ...(dynamicVariables && Object.keys(dynamicVariables).length > 0
+        ? { retell_llm_dynamic_variables: dynamicVariables }
+        : {}),
+    }),
+  });
+}
+
+export async function createChatCompletion(
+  chatId: string,
+  content: string
+): Promise<{ messages: ChatMessage[] }> {
+  return retellFetch("/create-chat-completion", {
+    method: "POST",
+    body: JSON.stringify({ chat_id: chatId, content }),
+  });
+}
+
+export async function listVoices(): Promise<RetellVoice[]> {
+  return retellFetch<RetellVoice[]>("/list-voices");
+}
+
+export interface CreateLlmFromTemplate {
+  model?: string;
+  general_prompt: string;
+  begin_message?: string;
+  start_speaker?: "agent" | "user";
+}
+
+export async function createRetellLlmFromTemplate(
+  data: CreateLlmFromTemplate
+): Promise<{ llm_id: string }> {
+  return retellFetch<{ llm_id: string }>("/create-retell-llm", {
+    method: "POST",
+    body: JSON.stringify({ model: "gpt-4.1", start_speaker: "agent", ...data }),
+  });
+}
+
+export async function createConversationFlow(
+  data: Record<string, unknown>
+): Promise<{ conversation_flow_id: string }> {
+  return retellFetch<{ conversation_flow_id: string }>("/create-conversation-flow", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteConversationFlow(flowId: string): Promise<void> {
+  await retellFetch<void>(`/delete-conversation-flow/${flowId}`, { method: "DELETE" });
+}
+
+export async function deleteRetellLlm(llmId: string): Promise<void> {
+  await retellFetch<void>(`/delete-retell-llm/${llmId}`, { method: "DELETE" });
+}
+
+/** Raw create-agent call that does not auto-create an LLM. */
+export async function createAgentRaw(data: Record<string, unknown>): Promise<RetellAgent> {
+  return retellFetch<RetellAgent>("/create-agent", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ---- Test chat ------------------------------------------------------------
+// Retell's create-chat only accepts chat agents. To let people text-test a
+// voice agent we keep one hidden chat agent that points at the same response
+// engine (LLM or conversation flow). It is found by tag, so nothing is stored
+// on our side, and it is re-pointed whenever the voice agent's engine changes.
+
+interface ChatAgentSummary {
+  agent_id: string;
+  agent_name?: string;
+  response_engine: RetellAgent["response_engine"];
+}
+
+// Chat agents do not keep assigned_tags, so the voice agent id lives in the name.
+const testChatSuffix = (voiceAgentId: string) => ` [test-chat:${voiceAgentId}]`;
+const isTestChatFor = (a: ChatAgentSummary, voiceAgentId: string) =>
+  !!a.agent_name?.endsWith(testChatSuffix(voiceAgentId));
+
+export async function listChatAgents(): Promise<ChatAgentSummary[]> {
+  return retellFetch<ChatAgentSummary[]>("/list-chat-agents");
+}
+
+export async function getOrCreateTestChatAgent(voiceAgentId: string): Promise<string> {
+  const voiceAgent = await getAgent(voiceAgentId);
+  const engine = voiceAgent.response_engine;
+  if (engine.type !== "retell-llm" && engine.type !== "conversation-flow") {
+    throw new Error("Text chat is only available for Retell LLM and conversational flow agents");
+  }
+
+  const existing = (await listChatAgents()).find((a) => isTestChatFor(a, voiceAgentId));
+
+  if (existing) {
+    const same =
+      existing.response_engine.type === engine.type &&
+      existing.response_engine.llm_id === engine.llm_id &&
+      existing.response_engine.conversation_flow_id === engine.conversation_flow_id &&
+      existing.response_engine.version === engine.version;
+    if (!same) {
+      await retellFetch(`/update-chat-agent/${existing.agent_id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ response_engine: engine }),
+      });
+    }
+    return existing.agent_id;
+  }
+
+  const created = await retellFetch<{ agent_id: string }>("/create-chat-agent", {
+    method: "POST",
+    body: JSON.stringify({
+      agent_name: `${voiceAgent.agent_name ?? "Agent"}${testChatSuffix(voiceAgentId)}`,
+      response_engine: engine,
+    }),
+  });
+  return created.agent_id;
+}
+
+/** Best effort: removes the hidden test chat agent when its voice agent is deleted. */
+export async function deleteTestChatAgents(voiceAgentId: string): Promise<void> {
+  const matches = (await listChatAgents()).filter((a) => isTestChatFor(a, voiceAgentId));
+  await Promise.allSettled(
+    matches.map((a) => retellFetch<void>(`/delete-chat-agent/${a.agent_id}`, { method: "DELETE" }))
   );
 }

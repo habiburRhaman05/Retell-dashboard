@@ -100,6 +100,8 @@ export async function DELETE(
 
   try {
     await retell.deleteAgent(agentId);
+    // Hidden test-chat agent (if any) goes with it. Never block deletion on this.
+    await retell.deleteTestChatAgents(agentId).catch(() => undefined);
     await prisma.locationAgent.deleteMany({
       where: { locationId, retellAgentId: agentId },
     });
