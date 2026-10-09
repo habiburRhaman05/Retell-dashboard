@@ -55,6 +55,7 @@ export const LLM_MODEL_OPTIONS = [
   { value: "gpt-6.1-sol", label: "GPT-6.1 Sol", group: "GPT" },
   { value: "gpt-6-luna", label: "GPT-6 Luna", group: "GPT" },
   { value: "claude-4.5-haiku", label: "Claude 4.5 Haiku", group: "Claude" },
+  { value: "claude-5.5-haiku", label: "Claude 5.5 Haiku", group: "Claude" },
   { value: "claude-4.5-sonnet", label: "Claude 4.5 Sonnet", group: "Claude" },
   { value: "claude-4.6-sonnet", label: "Claude 4.6 Sonnet", group: "Claude" },
   { value: "claude-5-sonnet", label: "Claude 5 Sonnet", group: "Claude" },
@@ -68,6 +69,16 @@ export const LLM_MODEL_OPTIONS = [
   { value: "gemini-3.6-flash", label: "Gemini 3.6 Flash", group: "Gemini" },
   { value: "gemini-3.7-flash", label: "Gemini 3.7 Flash", group: "Gemini" },
   { value: "gemini-3.8-flash", label: "Gemini 3.8 Flash", group: "Gemini" },
+] as const;
+
+/** Speech-to-speech models. Mutually exclusive with `model` on a Retell LLM. */
+export const S2S_MODEL_OPTIONS = [
+  { value: "gpt-realtime-2.1", label: "GPT Realtime 2.1", group: "Realtime (speech to speech)" },
+  { value: "gpt-realtime-2.1-mini", label: "GPT Realtime 2.1 Mini", group: "Realtime (speech to speech)" },
+  { value: "gpt-realtime-2", label: "GPT Realtime 2", group: "Realtime (speech to speech)" },
+  { value: "gpt-realtime-1.5", label: "GPT Realtime 1.5", group: "Realtime (speech to speech)" },
+  { value: "gpt-realtime", label: "GPT Realtime", group: "Realtime (speech to speech)" },
+  { value: "gpt-realtime-mini", label: "GPT Realtime Mini", group: "Realtime (speech to speech)" },
 ] as const;
 
 export const RESPONSE_ENGINE_TYPES = [

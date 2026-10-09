@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const allAgents = await retell.listAgents();
+    const allAgents = await retell.listAllAgents();
     const agentMap = new Map(allAgents.map((a) => [a.agent_id, a]));
 
     const alreadyMapped = await prisma.locationAgent.findMany({

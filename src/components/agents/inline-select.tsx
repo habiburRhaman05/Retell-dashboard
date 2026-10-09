@@ -9,6 +9,7 @@ export interface InlineSelectOption {
   value: string;
   label: string;
   group?: string;
+  icon?: React.ComponentType<{ className?: string }>;
 }
 
 export function InlineSelect({
@@ -88,10 +89,9 @@ export function InlineSelect({
     };
   }, [open]);
 
-  const currentLabel = useMemo(
-    () => options.find((o) => o.value === value)?.label ?? value,
-    [options, value]
-  );
+  const current = useMemo(() => options.find((o) => o.value === value), [options, value]);
+  const currentLabel = current?.label ?? value;
+  const CurrentIcon = current?.icon ?? Icon;
 
   const filtered = useMemo(() => {
     if (!search.trim()) return options;
@@ -132,7 +132,7 @@ export function InlineSelect({
         {isSaving ? (
           <Loader2 className="w-4 h-4 animate-spin shrink-0 text-brand-500" />
         ) : (
-          Icon && <Icon className="w-4 h-4 shrink-0 text-brand-500" />
+          CurrentIcon && (current?.icon ? <CurrentIcon className="w-4 h-4 shrink-0" /> : <CurrentIcon className="w-4 h-4 shrink-0 text-brand-500" />)
         )}
         <span className="flex-1 text-left truncate">{currentLabel}</span>
         <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -144,7 +144,7 @@ export function InlineSelect({
           <div
             ref={panelRef}
             style={{ position: "fixed", top: position.top, left: position.left }}
-            className="w-64 rounded-lg border border-gray-200 bg-white shadow-lg z-[100] overflow-hidden"
+            className="w-72 rounded-lg border border-gray-200 bg-white shadow-lg z-[100] overflow-hidden"
           >
             {searchable && (
               <div className="p-2 border-b border-gray-100">
@@ -161,7 +161,7 @@ export function InlineSelect({
                 </div>
               </div>
             )}
-            <div className="max-h-64 overflow-y-auto py-1">
+            <div className="max-h-[min(26rem,55vh)] overflow-y-auto py-1">
               {grouped.length === 0 && (
                 <p className="px-3 py-3 text-[12px] text-gray-400 text-center">No matches</p>
               )}
@@ -181,7 +181,10 @@ export function InlineSelect({
                         opt.value === value ? "text-brand-600 font-medium" : "text-gray-700"
                       )}
                     >
-                      {opt.label}
+                      <span className="flex items-center gap-2 min-w-0">
+                        {opt.icon && <opt.icon className="w-4 h-4 shrink-0" />}
+                        <span className="truncate">{opt.label}</span>
+                      </span>
                       {opt.value === value && <Check className="w-3.5 h-3.5 shrink-0" />}
                     </button>
                   ))}

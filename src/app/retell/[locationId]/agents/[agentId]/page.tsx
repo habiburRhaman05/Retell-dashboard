@@ -24,10 +24,14 @@ import { TestCallPanel } from "@/components/agents/test-call-panel";
 import { TestChatPanel } from "@/components/agents/test-chat-panel";
 import { VersionHistoryPanel } from "@/components/agents/version-history-panel";
 import { InlineSelect } from "@/components/agents/inline-select";
+import { WorkflowEditor } from "@/components/agents/workflow-editor";
+import { useAgentFlow, useUpdateAgentFlow } from "@/hooks/use-agent-flow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LLM_MODEL_OPTIONS } from "@/lib/constants";
+import { LLM_MODEL_OPTIONS, S2S_MODEL_OPTIONS } from "@/lib/constants";
+import { modelIcon } from "@/components/agents/model-icons";
+import { getTimezoneOptions } from "@/lib/timezones";
 import { VoiceField, LanguageField } from "@/components/agents/voice-language-fields";
 import {
   ArrowLeft,
@@ -50,18 +54,38 @@ import {
   BrainCog,
   FileText,
   MessageSquare,
+  Workflow,
+  Wand2,
+  Clock,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { RetellLlm, PronunciationEntry, PostCallAnalysisItem, RetellLlmTool } from "@/types/retell";
 
-type TabKey = "prompt" | "voice" | "call" | "tools" | "analysis" | "advanced";
+type TabKey = "workflow" | "prompt" | "voice" | "call" | "chat" | "tools" | "analysis" | "advanced";
 
 const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "prompt", label: "Prompt", icon: FileText },
   { key: "voice", label: "Voice & Speech", icon: Mic },
   { key: "call", label: "Call", icon: Phone },
+  { key: "tools", label: "Functions & Knowledge", icon: Zap },
+  { key: "analysis", label: "Analysis & Webhooks", icon: BarChart3 },
+  { key: "advanced", label: "Advanced", icon: Settings2 },
+];
+
+const FLOW_TABS: typeof TABS = [
+  { key: "workflow", label: "Workflow", icon: Workflow },
+  { key: "voice", label: "Voice & Speech", icon: Mic },
+  { key: "call", label: "Call", icon: Phone },
+  { key: "tools", label: "Knowledge", icon: BrainCircuit },
+  { key: "analysis", label: "Analysis & Webhooks", icon: BarChart3 },
+  { key: "advanced", label: "Advanced", icon: Settings2 },
+];
+
+const CHAT_TABS: typeof TABS = [
+  { key: "prompt", label: "Prompt", icon: FileText },
+  { key: "chat", label: "Chat settings", icon: MessageSquare },
   { key: "tools", label: "Functions & Knowledge", icon: Zap },
   { key: "analysis", label: "Analysis & Webhooks", icon: BarChart3 },
   { key: "advanced", label: "Advanced", icon: Settings2 },
@@ -102,6 +126,15 @@ export default function AgentDetailPage() {
     enabled: !!llmId,
   });
 
+  const isFlow = agent?.response_engine?.type === "conversation-flow";
+  const {
+    data: flow,
+    isLoading: flowLoading,
+    error: flowError,
+    refetch: refetchFlow,
+  } = useAgentFlow(agentId, locationId, isFlow);
+  const updateFlowMut = useUpdateAgentFlow(agentId, locationId);
+
   const updateLlmMut = useMutation({
     mutationFn: (data: Partial<RetellLlm>) =>
       fetchJson<RetellLlm>(`/api/retell/llm/${llmId}`, {
@@ -116,6 +149,9 @@ export default function AgentDetailPage() {
 
   const [prompt, setPrompt] = useState("");
   const [beginMessage, setBeginMessage] = useState("");
+  const [startSpeaker, setStartSpeaker] = useState<"agent" | "user">("agent");
+  // "dynamic" = begin_message is null and the model writes the greeting itself.
+  const [messageMode, setMessageMode] = useState<"custom" | "dynamic">("custom");
   const [showTestCall, setShowTestCall] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const [showTestChat, setShowTestChat] = useState(false);
@@ -130,10 +166,16 @@ export default function AgentDetailPage() {
     setSyncedLlmId(llm.llm_id);
     setPrompt(llm.general_prompt || "");
     setBeginMessage(llm.begin_message || "");
+    setStartSpeaker(llm.start_speaker ?? "agent");
+    setMessageMode(llm.begin_message === null ? "dynamic" : "custom");
   }
 
+  const savedMode = llm && llm.begin_message === null ? "dynamic" : "custom";
   const hasChanges = llm
-    ? prompt !== (llm.general_prompt || "") || beginMessage !== (llm.begin_message || "")
+    ? prompt !== (llm.general_prompt || "") ||
+      beginMessage !== (llm.begin_message || "") ||
+      startSpeaker !== (llm.start_speaker ?? "agent") ||
+      messageMode !== savedMode
     : false;
 
   const handleSavePrompt = useCallback(async () => {
@@ -141,13 +183,16 @@ export default function AgentDetailPage() {
     try {
       await updateLlmMut.mutateAsync({
         general_prompt: prompt,
-        begin_message: beginMessage,
+        start_speaker: startSpeaker,
+        // null lets the model generate the opening line; "" waits for the caller.
+        begin_message:
+          startSpeaker === "user" ? "" : messageMode === "dynamic" ? null : beginMessage,
       });
       toast("Prompt saved", "success");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Failed to save prompt", "error");
     }
-  }, [llmId, prompt, beginMessage, updateLlmMut, toast]);
+  }, [llmId, prompt, beginMessage, startSpeaker, messageMode, updateLlmMut, toast]);
 
   const handleUpdateAgent = useCallback(
     async (data: Record<string, unknown>) => {
@@ -164,6 +209,27 @@ export default function AgentDetailPage() {
     [agentId, updateAgentMut, queryClient, toast]
   );
 
+  // Realtime (speech to speech) models live in `s2s_model` and exclude `model`,
+  // so switching between the two kinds clears the other field.
+  const buildModelOptions = () => {
+    const base: { value: string; label: string; group?: string; icon: React.ComponentType<{ className?: string }> }[] = [
+      ...LLM_MODEL_OPTIONS.map((o) => ({ ...o, icon: modelIcon(o.value) })),
+      ...S2S_MODEL_OPTIONS.map((o) => ({ ...o, value: `s2s:${o.value}`, icon: modelIcon(o.value) })),
+    ];
+    const current = llm?.s2s_model ? `s2s:${llm.s2s_model}` : llm?.model ?? flow?.model_choice?.model;
+    // Agents created elsewhere may use a model that is not in our list.
+    if (current && !base.some((o) => o.value === current)) {
+      base.unshift({
+        value: current,
+        label: current.replace(/^s2s:/, ""),
+        group: "Current",
+        icon: modelIcon(current),
+      });
+    }
+    return base;
+  };
+  const modelOptions = buildModelOptions();
+
   const handleUpdateLlm = useCallback(
     async (data: Partial<RetellLlm>) => {
       try {
@@ -175,6 +241,11 @@ export default function AgentDetailPage() {
     },
     [updateLlmMut, toast]
   );
+
+  const handleModelChange = (v: string) =>
+    v.startsWith("s2s:")
+      ? handleUpdateLlm({ s2s_model: v.slice(4), model: null })
+      : handleUpdateLlm({ model: v, s2s_model: null });
 
   const handleDelete = async () => {
     if (!confirm(`Delete "${agent?.agent_name || "Unnamed"}"? This cannot be undone.`))
@@ -217,6 +288,30 @@ export default function AgentDetailPage() {
     );
   }
 
+  const timezoneOptions = [
+    { value: "", label: "No timezone set" },
+    ...getTimezoneOptions(),
+  ];
+  const isChat = agent.channel === "chat";
+  const currentTab: TabKey = isFlow && tab === "prompt" ? "workflow" : tab;
+  const timezoneBlock = (
+    <div className="px-5 py-3.5 border-t border-gray-50 first:border-0">
+      <p className="text-[13px] font-medium text-gray-700">Current time awareness</p>
+      <p className="text-[11px] text-gray-400 mt-0.5 mb-1.5">
+        Set the agent&apos;s timezone so it understands today, tomorrow and business hours
+        correctly.
+      </p>
+      <InlineSelect
+        icon={Clock}
+        value={agent.timezone ?? ""}
+        options={timezoneOptions}
+        searchable
+        isSaving={updateAgentMut.isPending}
+        onSave={(v) => handleUpdateAgent({ timezone: v || null })}
+      />
+    </div>
+  );
+  const tabs = isChat ? CHAT_TABS : isFlow ? FLOW_TABS : TABS;
   const voicemailEnabled = !!agent.voicemail_option;
   const voicemailActionType = agent.voicemail_option?.action?.type ?? "hangup";
   const ivrEnabled = !!agent.ivr_option;
@@ -250,6 +345,7 @@ export default function AgentDetailPage() {
                   {agent.is_published ? "Published" : "Draft"}
                 </Badge>
                 <span className="text-[11px] text-gray-400 font-medium">v{agent.version}</span>
+                {isChat && <Badge variant="info">Text agent</Badge>}
               </div>
               <p className="text-[12px] text-gray-500 mt-0.5">
                 Modified {timeAgo(agent.last_modification_timestamp)}
@@ -257,25 +353,29 @@ export default function AgentDetailPage() {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <Button size="sm" icon={PhoneCall} onClick={() => setShowTestCall(true)}>
-                Test Call
-              </Button>
+              {!isChat && (
+                <Button size="sm" icon={PhoneCall} onClick={() => setShowTestCall(true)}>
+                  Test Call
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="secondary"
                 icon={MessageSquare}
                 onClick={() => setShowTestChat(true)}
               >
-                <span className="hidden sm:inline">Test LLM</span>
+                <span className="hidden sm:inline">{isChat ? "Test chat" : "Test LLM"}</span>
               </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                icon={History}
-                onClick={() => setShowVersions(true)}
-              >
-                <span className="hidden sm:inline">Versions & Publish</span>
-              </Button>
+              {!isChat && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={History}
+                  onClick={() => setShowVersions(true)}
+                >
+                  <span className="hidden sm:inline">Versions & Publish</span>
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="ghost"
@@ -292,24 +392,46 @@ export default function AgentDetailPage() {
           </div>
 
           {/* Model / voice / language */}
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {llm ? (
+          <div className={cn("mt-4 grid grid-cols-1 gap-3", isChat ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+            {isFlow ? (
+              flow ? (
+                <InlineSelect
+                  icon={BrainCog}
+                  value={flow.model_choice?.model ?? ""}
+                  options={modelOptions}
+                  searchable
+                  isSaving={updateFlowMut.isPending}
+                  onSave={(v) =>
+                    updateFlowMut
+                      .mutateAsync({ model_choice: { ...flow.model_choice, model: v } })
+                      .then(() => toast("Model updated", "success"))
+                      .catch((err) =>
+                        toast(err instanceof Error ? err.message : "Failed to update model", "error")
+                      )
+                  }
+                />
+              ) : (
+                <div className="h-9 rounded-lg bg-gray-100 animate-pulse" />
+              )
+            ) :             llm ? (
               <InlineSelect
                 icon={BrainCog}
-                value={llm.model}
-                options={LLM_MODEL_OPTIONS}
+                value={llm.s2s_model ? `s2s:${llm.s2s_model}` : llm.model ?? ""}
+                options={modelOptions}
                 searchable
                 isSaving={updateLlmMut.isPending}
-                onSave={(v) => handleUpdateLlm({ model: v })}
+                onSave={handleModelChange}
               />
             ) : (
               <div className="h-9 rounded-lg bg-gray-100 animate-pulse" />
             )}
-            <VoiceField
-              value={agent.voice_id}
-              isSaving={updateAgentMut.isPending}
-              onSave={(v) => handleUpdateAgent({ voice_id: v })}
-            />
+            {!isChat && (
+              <VoiceField
+                value={agent.voice_id}
+                isSaving={updateAgentMut.isPending}
+                onSave={(v) => handleUpdateAgent({ voice_id: v })}
+              />
+            )}
             <LanguageField
               value={agent.language}
               isSaving={updateAgentMut.isPending}
@@ -322,9 +444,9 @@ export default function AgentDetailPage() {
       {/* Tabs */}
       <div className="bg-white border-b border-gray-200 px-4 lg:px-6 shrink-0">
         <div className="max-w-none mx-auto flex items-center gap-1 overflow-x-auto" role="tablist">
-          {TABS.map((t) => {
+          {tabs.map((t) => {
             const Icon = t.icon;
-            const active = tab === t.key;
+            const active = currentTab === t.key;
             return (
               <button
                 key={t.key}
@@ -356,7 +478,39 @@ export default function AgentDetailPage() {
       {/* Main content */}
       <div className="flex-1 overflow-y-auto bg-gray-50/70">
         <div className="max-w-none mx-auto px-4 lg:px-6 py-6">
-          {tab === "prompt" && (
+          {currentTab === "workflow" && isFlow && (
+            <div className="animate-fade-in">
+              {flowLoading && (
+                <div className="h-[420px] flex flex-col items-center justify-center gap-3 text-gray-500">
+                  <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+                  <p className="text-sm">Loading workflow from Retell...</p>
+                </div>
+              )}
+              {flowError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
+                  <p className="text-sm font-medium text-red-700">Could not load the workflow</p>
+                  <p className="text-xs text-red-600 mt-1">
+                    {flowError instanceof Error ? flowError.message : "Something went wrong"}
+                  </p>
+                  <Button size="sm" variant="secondary" className="mt-3" onClick={() => refetchFlow()}>
+                    Retry
+                  </Button>
+                </div>
+              )}
+              {flow && (
+                <WorkflowEditor
+                  flow={flow}
+                  isSaving={updateFlowMut.isPending}
+                  onSave={async (patch) => {
+                    await updateFlowMut.mutateAsync(patch);
+                    toast("Workflow saved", "success");
+                  }}
+                />
+              )}
+            </div>
+          )}
+
+          {currentTab === "prompt" && !isFlow && (
             <div className="space-y-4 animate-fade-in">
               <section className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100">
@@ -404,27 +558,78 @@ export default function AgentDetailPage() {
                 </div>
               </section>
 
-              <section className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
-                <div className="flex items-center justify-between mb-2">
+              <section className="rounded-xl border border-gray-200 bg-white shadow-sm p-5 space-y-3">
+                <div className="flex items-center justify-between">
                   <h2 className="text-[14px] font-semibold text-gray-900">Welcome message</h2>
                   <span className="text-[11px] text-gray-400">
-                    Leave empty to let the caller speak first
+                    Saved with the prompt using the Save button above
                   </span>
                 </div>
-                <Input
-                  type="text"
-                  value={beginMessage}
-                  onChange={(e) => setBeginMessage(e.target.value)}
-                  placeholder="Hi, how can I help you today?"
-                />
-                <p className="text-[11px] text-gray-400 mt-2">
-                  Saved together with the prompt using the Save button above.
-                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[12px] text-gray-600 mb-1">Who speaks first</p>
+                    <InlineSelect
+                      icon={MessageSquare}
+                      value={startSpeaker}
+                      options={[
+                        { value: "agent", label: "AI speaks first" },
+                        { value: "user", label: "User speaks first" },
+                      ]}
+                      onSave={(v) => setStartSpeaker(v as "agent" | "user")}
+                    />
+                  </div>
+                  {startSpeaker === "agent" && (
+                    <div>
+                      <p className="text-[12px] text-gray-600 mb-1">Message type</p>
+                      <InlineSelect
+                        icon={Wand2}
+                        value={messageMode}
+                        options={[
+                          { value: "dynamic", label: "Dynamic message (AI generated)" },
+                          { value: "custom", label: "Custom message" },
+                        ]}
+                        onSave={(v) => setMessageMode(v as "custom" | "dynamic")}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {startSpeaker === "agent" && messageMode === "custom" && (
+                  <Input
+                    type="text"
+                    value={beginMessage}
+                    onChange={(e) => setBeginMessage(e.target.value)}
+                    placeholder="Hi, how can I help you today?"
+                  />
+                )}
+                {startSpeaker === "agent" && messageMode === "dynamic" && (
+                  <p className="text-[12px] text-gray-500 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+                    The model writes the opening line from your prompt. Short openings (under 10
+                    seconds) are billed as 10 seconds.
+                  </p>
+                )}
+                {startSpeaker === "user" && (
+                  <p className="text-[12px] text-gray-500 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+                    The agent stays quiet until the caller speaks.
+                  </p>
+                )}
+
+                {!isChat && (
+                  <SliderSetting
+                    label="Pause before speaking (sec)"
+                    value={(agent.begin_message_delay_ms ?? 0) / 1000}
+                    min={0}
+                    max={5}
+                    step={0.5}
+                    onSave={(v) => handleUpdateAgent({ begin_message_delay_ms: v * 1000 })}
+                  />
+                )}
               </section>
             </div>
           )}
 
-          {tab === "voice" && (
+          {currentTab === "voice" && (
             <div className="space-y-4 animate-fade-in">
             <SettingsPanel icon={Mic} title="Speech settings"
               description="Voice delivery, pacing and interruption behavior"
@@ -542,7 +747,7 @@ export default function AgentDetailPage() {
             </SettingsPanel>
             </div>
           )}
-          {tab === "call" && (
+          {currentTab === "call" && (
             <div className="space-y-4 animate-fade-in">
             <SettingsPanel icon={Phone} title="Call settings"
               description="Limits, voicemail, IVR and keypad handling"
@@ -579,6 +784,7 @@ export default function AgentDetailPage() {
                 step={0.5}
                 onSave={(v) => handleUpdateAgent({ begin_message_delay_ms: v * 1000 })}
               />
+              {timezoneBlock}
               <SelectSetting
                 label="Ambient Sound"
                 value={agent.ambient_sound || ""}
@@ -765,8 +971,37 @@ export default function AgentDetailPage() {
             </SettingsPanel>
             </div>
           )}
-          {tab === "tools" && (
+          {currentTab === "chat" && isChat && (
             <div className="space-y-4 animate-fade-in">
+              <SettingsPanel
+                icon={MessageSquare}
+                title="Chat settings"
+                description="How long chats stay open and what happens when they end"
+              >
+                <NumberSetting
+                  label="End chat after silence (minutes)"
+                  description="Between 2 minutes and 72 hours (4320 minutes)"
+                  value={Math.round((agent.end_chat_after_silence_ms ?? 3600000) / 60000)}
+                  min={2}
+                  max={4320}
+                  suffix="min"
+                  onSave={(v) => handleUpdateAgent({ end_chat_after_silence_ms: v * 60000 })}
+                />
+                <TextSetting
+                  label="Auto-close message"
+                  description="Shown when the chat is closed automatically"
+                  value={agent.auto_close_message || ""}
+                  multiline
+                  placeholder="Thank you for chatting. The conversation has ended."
+                  onSave={(v) => handleUpdateAgent({ auto_close_message: v })}
+                />
+                {timezoneBlock}
+              </SettingsPanel>
+            </div>
+          )}
+          {currentTab === "tools" && (
+            <div className="space-y-4 animate-fade-in">
+            {!isFlow && (
             <SettingsPanel icon={Zap} title="Functions"
               description="Tools the agent can call during a conversation"
             >
@@ -783,6 +1018,7 @@ export default function AgentDetailPage() {
                 />
               )}
             </SettingsPanel>
+            )}
 
             <SettingsPanel icon={BrainCircuit} title="Knowledge base & memory"
               description="Reference content and caller memory"
@@ -816,14 +1052,24 @@ export default function AgentDetailPage() {
               <div className="border-t border-gray-100">
                 <KnowledgeBaseSelector
                   locationId={locationId}
-                  attachedIds={llm?.knowledge_base_ids ?? []}
-                  isLoading={llmLoading}
-                  isSaving={updateLlmMut.isPending}
-                  onSave={(ids) => handleUpdateLlm({ knowledge_base_ids: ids })}
+                  attachedIds={(isFlow ? flow?.knowledge_base_ids : llm?.knowledge_base_ids) ?? []}
+                  isLoading={isFlow ? flowLoading : llmLoading}
+                  isSaving={isFlow ? updateFlowMut.isPending : updateLlmMut.isPending}
+                  onSave={(ids) =>
+                    isFlow
+                      ? updateFlowMut
+                          .mutateAsync({ knowledge_base_ids: ids })
+                          .then(() => toast("Saved", "success"))
+                          .catch((err) =>
+                            toast(err instanceof Error ? err.message : "Failed to save", "error")
+                          )
+                      : handleUpdateLlm({ knowledge_base_ids: ids })
+                  }
                 />
               </div>
             </SettingsPanel>
 
+            {!isChat && (
             <SettingsPanel icon={Languages} title="Pronunciation"
               description="Custom pronunciations for names and terms"
             >
@@ -833,17 +1079,22 @@ export default function AgentDetailPage() {
                 onSave={(entries) => handleUpdateAgent({ pronunciation_dictionary: entries })}
               />
             </SettingsPanel>
+            )}
             </div>
           )}
-          {tab === "analysis" && (
+          {currentTab === "analysis" && (
             <div className="space-y-4 animate-fade-in">
-            <SettingsPanel icon={BarChart3} title="Post call extraction"
-              description="Structured data pulled from each call"
+            <SettingsPanel icon={BarChart3} title={isChat ? "Post chat extraction" : "Post call extraction"}
+              description={isChat ? "Structured data pulled from each chat" : "Structured data pulled from each call"}
             >
               <PostCallAnalysisEditor
-                items={(agent.post_call_analysis_data ?? []) as PostCallAnalysisItem[]}
+                items={((isChat ? agent.post_chat_analysis_data : agent.post_call_analysis_data) ?? []) as PostCallAnalysisItem[]}
                 isSaving={updateAgentMut.isPending}
-                onSave={(items) => handleUpdateAgent({ post_call_analysis_data: items })}
+                onSave={(items) =>
+                  handleUpdateAgent(
+                    isChat ? { post_chat_analysis_data: items } : { post_call_analysis_data: items }
+                  )
+                }
               />
             </SettingsPanel>
 
@@ -858,7 +1109,7 @@ export default function AgentDetailPage() {
               />
               <TagListSetting
                 label="Events"
-                description="e.g. call_started, call_ended, call_analyzed"
+                description={isChat ? "e.g. chat_started, chat_ended, chat_analyzed" : "e.g. call_started, call_ended, call_analyzed"}
                 value={agent.webhook_events ?? []}
                 placeholder="call_ended"
                 onSave={(v) => handleUpdateAgent({ webhook_events: v })}
@@ -866,7 +1117,7 @@ export default function AgentDetailPage() {
             </SettingsPanel>
             </div>
           )}
-          {tab === "advanced" && (
+          {currentTab === "advanced" && (
             <div className="space-y-4 animate-fade-in">
             <SettingsPanel icon={Database} title="Data & privacy"
               description="Storage, retention and access"
@@ -949,7 +1200,7 @@ export default function AgentDetailPage() {
         />
       )}
 
-      {showVersions && (
+      {showVersions && !isChat && (
         <VersionHistoryPanel
           agentId={agentId}
           locationId={locationId}

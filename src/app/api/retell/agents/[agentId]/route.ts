@@ -31,7 +31,7 @@ export async function GET(
   }
 
   try {
-    const agent = await retell.getAgent(agentId);
+    const agent = await retell.getAnyAgent(agentId);
     return NextResponse.json(agent);
   } catch (error) {
     const message =
@@ -62,7 +62,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Agent not found" }, { status: 403 });
     }
 
-    const agent = await retell.updateAgent(agentId, updateData);
+    const agent = await retell.updateAnyAgent(agentId, updateData);
 
     if (agent.agent_name) {
       await prisma.locationAgent.updateMany({
@@ -99,7 +99,7 @@ export async function DELETE(
   }
 
   try {
-    await retell.deleteAgent(agentId);
+    await retell.deleteAnyAgent(agentId);
     // Hidden test-chat agent (if any) goes with it. Never block deletion on this.
     await retell.deleteTestChatAgents(agentId).catch(() => undefined);
     await prisma.locationAgent.deleteMany({

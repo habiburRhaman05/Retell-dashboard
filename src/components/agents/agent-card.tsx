@@ -91,6 +91,7 @@ export function AgentCard({
               <Badge variant={agent.is_published ? "success" : "warning"} dot>
                 {agent.is_published ? "Published" : "Draft"}
               </Badge>
+              {agent.channel === "chat" && <Badge variant="info">Text</Badge>}
             </div>
             <p className="text-xs text-gray-400 font-mono mt-0.5">
               {agent.agent_id.slice(0, 24)}...
@@ -98,10 +99,12 @@ export function AgentCard({
           </div>
 
           <div className="hidden lg:flex items-center gap-5 text-xs text-gray-500 shrink-0">
-            <span className="inline-flex items-center gap-1.5">
-              <Volume2 className="w-3.5 h-3.5 text-gray-400" />
-              {getVoiceLabel(agent.voice_id)}
-            </span>
+            {agent.channel !== "chat" && (
+              <span className="inline-flex items-center gap-1.5">
+                <Volume2 className="w-3.5 h-3.5 text-gray-400" />
+                {getVoiceLabel(agent.voice_id)}
+              </span>
+            )}
             {agent.language && (
               <span className="inline-flex items-center gap-1.5">
                 <Globe className="w-3.5 h-3.5 text-gray-400" />
@@ -164,7 +167,9 @@ export function AgentCard({
         </div>
 
         <div className="space-y-2.5 mb-4">
-          <InfoRow icon={Volume2} label="Voice" value={getVoiceLabel(agent.voice_id)} />
+          {agent.channel !== "chat" && (
+            <InfoRow icon={Volume2} label="Voice" value={getVoiceLabel(agent.voice_id)} />
+          )}
           {agent.language && (
             <InfoRow icon={Globe} label="Language" value={languagesLabel(agent.language)} />
           )}
@@ -181,6 +186,7 @@ export function AgentCard({
               {agent.is_published ? "Published" : "Draft"}
             </Badge>
             <span className="text-[11px] text-gray-400">v{agent.version}</span>
+            {agent.channel === "chat" && <Badge variant="info">Text</Badge>}
           </div>
           <span className="text-xs text-brand-500 font-medium opacity-0 group-hover:opacity-100 transition-all duration-150 inline-flex items-center gap-1">
             Open <ArrowUpRight className="w-3 h-3" />

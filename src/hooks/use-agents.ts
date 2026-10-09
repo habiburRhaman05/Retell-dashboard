@@ -117,10 +117,11 @@ export function useImportAgents(locationId: string) {
 
 export interface CreateAgentFromTemplateInput {
   name: string;
+  channel?: "voice" | "text";
   type: "single" | "flow";
   templateId?: string | null;
   businessName?: string;
-  voiceId: string;
+  voiceId?: string;
   language: string | string[];
 }
 

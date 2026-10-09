@@ -243,7 +243,9 @@ export async function createChat(
   voiceAgentId: string,
   dynamicVariables?: Record<string, string>
 ): Promise<{ chat_id: string; chat_status: string }> {
-  const chatAgentId = await getOrCreateTestChatAgent(voiceAgentId);
+  const target = await getAnyAgent(voiceAgentId);
+  const chatAgentId =
+    target.channel === "chat" ? voiceAgentId : await getOrCreateTestChatAgent(voiceAgentId);
   return retellFetch("/create-chat", {
     method: "POST",
     body: JSON.stringify({
@@ -371,4 +373,95 @@ export async function deleteTestChatAgents(voiceAgentId: string): Promise<void> 
   await Promise.allSettled(
     matches.map((a) => retellFetch<void>(`/delete-chat-agent/${a.agent_id}`, { method: "DELETE" }))
   );
+}
+
+// ---- Voice and text (chat) agents ------------------------------------------
+// Retell keeps voice and chat agents behind separate endpoints, and rejects the
+// wrong one with "Invalid agent channel". These helpers pick the right one.
+
+const isWrongChannel = (e: unknown) =>
+  e instanceof Error && e.message.includes("Invalid agent channel");
+
+export const isHiddenTestChatAgent = (a: { agent_name?: string | null }) =>
+  !!a.agent_name && /\[test-chat:agent_[^\]]+\]$/.test(a.agent_name);
+
+export async function getAnyAgent(agentId: string, version?: number | string): Promise<RetellAgent> {
+  try {
+    return await getAgent(agentId, version);
+  } catch (e) {
+    if (!isWrongChannel(e)) throw e;
+    const params = version ? `?version=${version}` : "";
+    return retellFetch<RetellAgent>(`/get-chat-agent/${agentId}${params}`);
+  }
+}
+
+export async function updateAnyAgent(
+  agentId: string,
+  data: Record<string, unknown>
+): Promise<RetellAgent> {
+  try {
+    return await updateAgent(agentId, data as UpdateAgentPayload);
+  } catch (e) {
+    if (!isWrongChannel(e)) throw e;
+    return retellFetch<RetellAgent>(`/update-chat-agent/${agentId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+}
+
+export async function deleteAnyAgent(agentId: string): Promise<void> {
+  try {
+    await deleteAgent(agentId);
+  } catch (e) {
+    if (!isWrongChannel(e)) throw e;
+    await retellFetch<void>(`/delete-chat-agent/${agentId}`, { method: "DELETE" });
+  }
+}
+
+export async function createChatAgentRaw(data: Record<string, unknown>): Promise<RetellAgent> {
+  return retellFetch<RetellAgent>("/create-chat-agent", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// ---- Conversation flows ---------------------------------------------------
+
+export async function getConversationFlow(
+  flowId: string,
+  version?: number
+): Promise<Record<string, unknown>> {
+  const q = version !== undefined && version !== null ? `?version=${version}` : "";
+  return retellFetch<Record<string, unknown>>(`/get-conversation-flow/${flowId}${q}`);
+}
+
+export async function updateConversationFlow(
+  flowId: string,
+  data: Record<string, unknown>,
+  version?: number
+): Promise<Record<string, unknown>> {
+  const q = version !== undefined && version !== null ? `?version=${version}` : "";
+  return retellFetch<Record<string, unknown>>(`/update-conversation-flow/${flowId}${q}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+/** Voice agents and text (chat) agents, which Retell lists separately. */
+export async function listAllAgents(): Promise<RetellAgent[]> {
+  const [voice, chat] = await Promise.all([
+    listAgents(),
+    // Must not swallow errors: callers delete mappings for agents missing from
+    // this list, so a failed chat listing would wrongly orphan every text agent.
+    retellFetch<RetellAgent[]>("/list-chat-agents"),
+  ]);
+  const seen = new Set<string>();
+  const out: RetellAgent[] = [];
+  for (const a of [...voice, ...chat]) {
+    if (seen.has(a.agent_id)) continue;
+    seen.add(a.agent_id);
+    out.push(a);
+  }
+  return out;
 }

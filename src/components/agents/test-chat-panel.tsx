@@ -171,17 +171,19 @@ export function TestChatPanel({
                   <input
                     value={v.key}
                     placeholder="name"
-                    onChange={(e) =>
-                      setVars((p) => p.map((x) => (x.id === v.id ? { ...x, key: e.target.value } : x)))
-                    }
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setVars((p) => p.map((x) => (x.id === v.id ? { ...x, key: next } : x)));
+                    }}
                     className="w-2/5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[12px] focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
                   />
                   <input
                     value={v.value}
                     placeholder="value"
-                    onChange={(e) =>
-                      setVars((p) => p.map((x) => (x.id === v.id ? { ...x, value: e.target.value } : x)))
-                    }
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setVars((p) => p.map((x) => (x.id === v.id ? { ...x, value: next } : x)));
+                    }}
                     className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[12px] focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
                   />
                   <button

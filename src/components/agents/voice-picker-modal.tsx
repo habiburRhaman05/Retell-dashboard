@@ -145,8 +145,13 @@ export function VoicePickerModal({
   const stopAudio = () => {
     const a = audioRef.current;
     if (a) {
+      // Detach handlers first: clearing src fires an error event that would
+      // otherwise be reported as a failed preview for the voice we just left.
+      a.onended = null;
+      a.onerror = null;
       a.pause();
-      a.src = "";
+      a.removeAttribute("src");
+      a.load();
     }
     audioRef.current = null;
     setPlayingId(null);
@@ -156,8 +161,11 @@ export function VoicePickerModal({
     return () => {
       const a = audioRef.current;
       if (a) {
+        a.onended = null;
+        a.onerror = null;
         a.pause();
-        a.src = "";
+        a.removeAttribute("src");
+        a.load();
       }
     };
   }, []);
@@ -238,10 +246,14 @@ export function VoicePickerModal({
     setPlayingId(v.voice_id);
     audio.onended = () => setPlayingId((cur) => (cur === v.voice_id ? null : cur));
     audio.onerror = () => {
+      if (audioRef.current !== audio) return;
       setPlayingId((cur) => (cur === v.voice_id ? null : cur));
       setPreviewError(`Could not play the preview for ${v.voice_name}`);
     };
-    audio.play().catch(() => {
+    audio.play().catch((err: unknown) => {
+      // An interrupted play (user clicked another voice) is not an error.
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (audioRef.current !== audio) return;
       setPlayingId((cur) => (cur === v.voice_id ? null : cur));
       setPreviewError(`Could not play the preview for ${v.voice_name}`);
     });

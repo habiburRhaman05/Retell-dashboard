@@ -9,6 +9,7 @@ import {
   Workflow,
   ArrowDown,
   FileText,
+  Mic,
   Flag,
   MessageSquare,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import {
 import { VoiceField, LanguageField } from "./voice-language-fields";
 
 type AgentType = "single" | "flow";
+type Channel = "voice" | "text";
 
 export function CreateAgentModal({
   locationId,
@@ -39,6 +41,7 @@ export function CreateAgentModal({
   const { toast } = useToast();
   const createAgent = useCreateAgentFromTemplate(locationId);
 
+  const [channel, setChannel] = useState<Channel>("voice");
   const [type, setType] = useState<AgentType>("single");
   const [category, setCategory] = useState<TemplateCategory | "all">("all");
   const [templateId, setTemplateId] = useState<string | null>(null);
@@ -85,10 +88,11 @@ export function CreateAgentModal({
     try {
       const agent = await createAgent.mutateAsync({
         name: trimmed,
+        channel,
         type,
         templateId,
         businessName: businessName.trim() || undefined,
-        voiceId,
+        voiceId: channel === "voice" ? voiceId : undefined,
         language,
       });
       toast("Agent created", "success");
@@ -140,6 +144,34 @@ export function CreateAgentModal({
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
           {/* Left: type + templates */}
           <div className="flex-1 min-w-0 overflow-y-auto px-6 py-5 space-y-6">
+            <div>
+              <p className="text-[12px] font-semibold text-gray-700 mb-2">Channel</p>
+              <div className="inline-flex p-1 rounded-xl bg-gray-100">
+                {([
+                  { key: "voice", label: "Voice agent", icon: Mic },
+                  { key: "text", label: "Text agent", icon: MessageSquare },
+                ] as const).map((c) => {
+                  const Icon = c.icon;
+                  return (
+                    <button
+                      key={c.key}
+                      onClick={() => setChannel(c.key)}
+                      aria-pressed={channel === c.key}
+                      className={cn(
+                        "inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-lg transition-all",
+                        channel === c.key
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-500 hover:text-gray-800"
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div>
               <p className="text-[12px] font-semibold text-gray-700 mb-2">Type</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -260,10 +292,12 @@ export function CreateAgentModal({
                   onChange={(e) => setBusinessName(e.target.value)}
                 />
               </div>
-              <div>
-                <p className="text-[12px] text-gray-600 mb-1">Voice</p>
-                <VoiceField value={voiceId} onSave={(v) => setVoiceId(v)} />
-              </div>
+              {channel === "voice" && (
+                <div>
+                  <p className="text-[12px] text-gray-600 mb-1">Voice</p>
+                  <VoiceField value={voiceId} onSave={(v) => setVoiceId(v)} />
+                </div>
+              )}
               <div>
                 <p className="text-[12px] text-gray-600 mb-1">Language</p>
                 <LanguageField value={language} onSave={(v) => setLanguage(v)} />
@@ -282,7 +316,8 @@ export function CreateAgentModal({
         <div className="flex items-center justify-between gap-3 px-6 py-3.5 border-t border-gray-200 shrink-0">
           <p className="text-[12px] text-gray-500 truncate">
             {selected ? `Template: ${selected.name}` : "Blank agent"} ·{" "}
-            {type === "flow" ? "Conversational flow" : "Single prompt"}
+            {type === "flow" ? "Conversational flow" : "Single prompt"} ·{" "}
+            {channel === "text" ? "Text agent" : "Voice agent"}
           </p>
           <div className="flex items-center gap-2 shrink-0">
             <Button variant="secondary" onClick={onClose} disabled={busy}>

@@ -93,7 +93,12 @@ export interface RetellAgent {
   ambient_sound_volume: number;
   language: string | string[] | null;
   timezone?: string | null;
-  channel?: "voice" | "phone" | "web" | string;
+  channel?: "voice" | "chat" | string;
+  // text (chat) agents
+  end_chat_after_silence_ms?: number;
+  auto_close_message?: string | null;
+  post_chat_analysis_data?: PostCallAnalysisItem[];
+  post_chat_analysis_model?: string;
   webhook_url: string | null;
   webhook_events: string[];
   webhook_timeout_ms?: number;
@@ -213,8 +218,8 @@ export interface RetellLlmTool {
 export interface RetellLlm {
   llm_id: string;
   version: number;
-  model: string;
-  s2s_model?: string;
+  model: string | null;
+  s2s_model?: string | null;
   general_prompt: string;
   begin_message: string | null;
   start_speaker: "agent" | "user";

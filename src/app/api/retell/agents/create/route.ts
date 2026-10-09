@@ -6,6 +6,7 @@ import { buildFlowPayload, fillTemplate, getTemplate } from "@/lib/agent-templat
 interface CreateBody {
   locationId?: string;
   name?: string;
+  channel?: "voice" | "text";
   type?: "single" | "flow";
   templateId?: string | null;
   businessName?: string;
@@ -21,6 +22,17 @@ You are {{agent}}, a helpful AI voice assistant for {{business}}.
 - Ask one question at a time.
 - If you do not know something, say so.`;
 
+// Templates are written for phone calls; adapt the wording for text chat.
+function forText(text: string): string {
+  return text
+    .replace(/This is a phone call, so never use lists or markdown\./g, "This is a text chat, so keep messages short and friendly.")
+    .replace(/like a real person on the phone/g, "like a real person in a chat")
+    .replace(/Call to /g, "Chat to ")
+    .replace(/phone call/g, "chat")
+    .replace(/end the call/gi, "end the chat")
+    .replace(/ending the call/gi, "ending the chat");
+}
+
 export async function POST(request: NextRequest) {
   let createdLlmId: string | null = null;
   let createdFlowId: string | null = null;
@@ -28,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = (await request.json().catch(() => ({}))) as CreateBody;
-    const { locationId, type = "single" } = body;
+    const { locationId, type = "single", channel = "voice" } = body;
     const name = body.name?.trim();
     const business = body.businessName?.trim() || "";
 
@@ -38,7 +50,10 @@ export async function POST(request: NextRequest) {
     if (!name) {
       return NextResponse.json({ error: "Agent name is required" }, { status: 400 });
     }
-    if (!body.voiceId) {
+    if (channel !== "voice" && channel !== "text") {
+      return NextResponse.json({ error: "Invalid agent channel" }, { status: 400 });
+    }
+    if (channel === "voice" && !body.voiceId) {
       return NextResponse.json({ error: "Please choose a voice" }, { status: 400 });
     }
     if (type !== "single" && type !== "flow") {
@@ -72,14 +87,16 @@ export async function POST(request: NextRequest) {
           { id: "end", name: "End call", end: true, prompt: "Thank the caller and end the call." },
         ],
       };
-      const flow = await retell.createConversationFlow(
-        buildFlowPayload(flowDef, name, business)
-      );
+      let flowPayload: Record<string, unknown> = buildFlowPayload(flowDef, name, business);
+      if (channel === "text") flowPayload = JSON.parse(forText(JSON.stringify(flowPayload)));
+      const flow = await retell.createConversationFlow(flowPayload);
       createdFlowId = flow.conversation_flow_id;
       responseEngine = { type: "conversation-flow", conversation_flow_id: createdFlowId };
     } else {
       const llm = await retell.createRetellLlmFromTemplate({
-        general_prompt: fillTemplate(template?.prompt ?? BLANK_PROMPT, name, business),
+        general_prompt: (channel === "text" ? forText : (t: string) => t)(
+          fillTemplate(template?.prompt ?? BLANK_PROMPT, name, business)
+        ),
         begin_message: fillTemplate(
           template?.beginMessage ?? "Hi, this is {{agent}}. How can I help you today?",
           name,
@@ -91,13 +108,20 @@ export async function POST(request: NextRequest) {
       responseEngine = { type: "retell-llm", llm_id: createdLlmId };
     }
 
-    const agent = await retell.createAgentRaw({
-      agent_name: name,
-      response_engine: responseEngine,
-      voice_id: body.voiceId,
-      language: body.language ?? "en-US",
-      assigned_tags: [`loc:${locationId}`],
-    });
+    const agent =
+      channel === "text"
+        ? await retell.createChatAgentRaw({
+            agent_name: name,
+            response_engine: responseEngine,
+            language: body.language ?? "en-US",
+          })
+        : await retell.createAgentRaw({
+            agent_name: name,
+            response_engine: responseEngine,
+            voice_id: body.voiceId,
+            language: body.language ?? "en-US",
+            assigned_tags: [`loc:${locationId}`],
+          });
     createdAgentId = agent.agent_id;
 
     await prisma.location.upsert({
@@ -114,7 +138,7 @@ export async function POST(request: NextRequest) {
     // Roll back anything already created in Retell so a failed attempt does
     // not leave orphaned agents, LLMs or flows behind.
     await Promise.allSettled([
-      createdAgentId ? retell.deleteAgent(createdAgentId) : Promise.resolve(),
+      createdAgentId ? retell.deleteAnyAgent(createdAgentId) : Promise.resolve(),
     ]);
     await Promise.allSettled([
       createdLlmId ? retell.deleteRetellLlm(createdLlmId) : Promise.resolve(),

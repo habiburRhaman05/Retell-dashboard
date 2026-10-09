@@ -21,8 +21,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([]);
     }
 
-    const allAgents = await retell.listAgents();
-    const voiceAgents = allAgents.filter((a) => a.channel === "voice");
+    const allAgents = await retell.listAllAgents();
+    const voiceAgents = allAgents.filter(
+      (a) => (a.channel === "voice" || a.channel === "chat") && !retell.isHiddenTestChatAgent(a)
+    );
 
     const agentIds = new Set(mappings.map((m) => m.retellAgentId));
     const locationAgents = voiceAgents.filter((a) =>

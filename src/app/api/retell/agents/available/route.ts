@@ -12,8 +12,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const allAgents = await retell.listAgents();
-    const voiceAgents = allAgents.filter((a) => a.channel === "voice");
+    const allAgents = await retell.listAllAgents();
+    const voiceAgents = allAgents.filter(
+      (a) => (a.channel === "voice" || a.channel === "chat") && !retell.isHiddenTestChatAgent(a)
+    );
 
     const allMappings = await prisma.locationAgent.findMany({
       select: { retellAgentId: true },
