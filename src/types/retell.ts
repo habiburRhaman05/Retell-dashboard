@@ -63,6 +63,25 @@ export interface PostCallAnalysisItem {
   choices?: string[];
 }
 
+/** A function that runs around a call: before it starts (pre) or after it ends (post). */
+export interface SessionTool {
+  type: "custom" | "code" | "send_sms" | "integration_app" | (string & {});
+  name: string;
+  description?: string;
+  depends_on?: string[];
+  condition?: unknown;
+  url?: string;
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  headers?: Record<string, string>;
+  query_params?: Record<string, string>;
+  parameters?: unknown;
+  response_variables?: Record<string, string>;
+  timeout_ms?: number;
+  code?: string;
+  sms_content?: { type: string; text?: string; prompt?: string; template?: string };
+  [key: string]: unknown;
+}
+
 export interface RetellAgent {
   agent_id: string;
   agent_name: string | null;
@@ -126,6 +145,8 @@ export interface RetellAgent {
   max_call_duration_ms: number;
   post_call_analysis_data: PostCallAnalysisItem[];
   post_call_analysis_model?: string | null;
+  pre_session_tools?: SessionTool[] | null;
+  post_session_tools?: SessionTool[] | null;
   data_storage_setting?: "everything" | "everything_except_pii" | "basic_attributes_only";
   data_storage_retention_days?: number | null;
   opt_in_signed_url?: boolean;

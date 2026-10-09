@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import { Aperture, Asterisk, Sparkles, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,4 +37,8 @@ export function modelIcon(model: string): React.ComponentType<IconProps> {
     default:
       return OtherIcon;
   }
+}
+
+export function ModelGlyph({ model, className }: { model: string; className?: string }) {
+  return createElement(modelIcon(model), { className });
 }

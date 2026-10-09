@@ -26,6 +26,8 @@ import { VersionHistoryPanel } from "@/components/agents/version-history-panel";
 import { InlineSelect } from "@/components/agents/inline-select";
 import { WorkflowEditor, type WorkflowEditorHandle } from "@/components/agents/workflow-editor";
 import { SaveButton } from "@/components/agents/save-button";
+import { EditableTitle } from "@/components/agents/editable-title";
+import { AgentOverviewCanvas } from "@/components/agents/agent-overview-canvas";
 import { useAgentFlow, useUpdateAgentFlow } from "@/hooks/use-agent-flow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,6 +69,7 @@ type TabKey = "workflow" | "prompt" | "voice" | "call" | "chat" | "tools" | "ana
 
 const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "prompt", label: "Prompt", icon: FileText },
+  { key: "workflow", label: "Workflow", icon: Workflow },
   { key: "voice", label: "Voice & Speech", icon: Mic },
   { key: "call", label: "Call", icon: Phone },
   { key: "tools", label: "Functions & Knowledge", icon: Zap },
@@ -235,7 +238,10 @@ export default function AgentDetailPage() {
   const handleUpdateAgent = useCallback(
     async (data: Record<string, unknown>) => {
       try {
-        await updateAgentMut.mutateAsync({ agentId, data });
+        const updated = await updateAgentMut.mutateAsync({ agentId, data });
+        // Show the saved agent straight away; Retell's own read can lag a moment
+        // behind a write, so the background refetch only confirms it.
+        if (updated?.agent_id) queryClient.setQueryData(["agent", agentId], updated);
         queryClient.invalidateQueries({ queryKey: ["agent", agentId] });
         toast("Settings saved", "success");
         return true;
@@ -331,6 +337,24 @@ export default function AgentDetailPage() {
     ...getTimezoneOptions(),
   ];
   const isChat = agent.channel === "chat";
+  const kbSelector = (
+    <KnowledgeBaseSelector
+                  locationId={locationId}
+                  attachedIds={(isFlow ? flow?.knowledge_base_ids : llm?.knowledge_base_ids) ?? []}
+                  isLoading={isFlow ? flowLoading : llmLoading}
+                  isSaving={isFlow ? updateFlowMut.isPending : updateLlmMut.isPending}
+                  onSave={(ids) =>
+                    isFlow
+                      ? updateFlowMut
+                          .mutateAsync({ knowledge_base_ids: ids })
+                          .then(() => toast("Saved", "success"))
+                          .catch((err) =>
+                            toast(err instanceof Error ? err.message : "Failed to save", "error")
+                          )
+                      : handleUpdateLlm({ knowledge_base_ids: ids })
+                  }
+                />
+  );
   const currentTab: TabKey = isFlow && tab === "prompt" ? "workflow" : tab;
   const timezoneBlock = (
     <div className="px-5 py-3.5 border-t border-gray-50 first:border-0">
@@ -376,8 +400,11 @@ export default function AgentDetailPage() {
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg font-semibold text-gray-900 truncate tracking-tight">
-                  {agent.agent_name || "Unnamed Agent"}
+                <h1 className="text-lg font-semibold text-gray-900 tracking-tight min-w-0">
+                  <EditableTitle
+                    value={agent.agent_name || ""}
+                    onSave={(name) => handleUpdateAgent({ agent_name: name })}
+                  />
                 </h1>
                 <Badge variant={agent.is_published ? "success" : "warning"} dot>
                   {agent.is_published ? "Published" : "Draft"}
@@ -553,6 +580,20 @@ export default function AgentDetailPage() {
                   }}
                 />
               )}
+            </div>
+          )}
+
+          {currentTab === "workflow" && !isFlow && !isChat && (
+            <div className="animate-fade-in">
+              <AgentOverviewCanvas
+                agent={agent}
+                llm={llm}
+                isSaving={updateAgentMut.isPending}
+                onUpdateAgent={handleUpdateAgent}
+                kbPanel={kbSelector}
+                kbCount={(llm?.knowledge_base_ids ?? []).length}
+                onEditPrompt={() => setTab("prompt")}
+              />
             </div>
           )}
 
@@ -1087,22 +1128,7 @@ export default function AgentDetailPage() {
                 }
               />
               <div className="border-t border-gray-100">
-                <KnowledgeBaseSelector
-                  locationId={locationId}
-                  attachedIds={(isFlow ? flow?.knowledge_base_ids : llm?.knowledge_base_ids) ?? []}
-                  isLoading={isFlow ? flowLoading : llmLoading}
-                  isSaving={isFlow ? updateFlowMut.isPending : updateLlmMut.isPending}
-                  onSave={(ids) =>
-                    isFlow
-                      ? updateFlowMut
-                          .mutateAsync({ knowledge_base_ids: ids })
-                          .then(() => toast("Saved", "success"))
-                          .catch((err) =>
-                            toast(err instanceof Error ? err.message : "Failed to save", "error")
-                          )
-                      : handleUpdateLlm({ knowledge_base_ids: ids })
-                  }
-                />
+                {kbSelector}
               </div>
             </SettingsPanel>
 
