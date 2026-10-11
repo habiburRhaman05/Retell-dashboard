@@ -2,7 +2,8 @@
 
 import "@xyflow/react/dist/style.css";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -30,17 +31,29 @@ import {
   Type,
   Webhook,
   Zap,
+  Code2,
+  MessageSquareText,
+  Wrench,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { InlineSelect } from "./inline-select";
 import { ModelGlyph, modelIcon } from "./model-icons";
 import { PostCallAnalysisEditor } from "./post-call-analysis-editor";
+import { FunctionsEditor } from "./functions-editor";
 import { SessionToolsEditor, toolMeta } from "./session-tools-editor";
 import { SliderSetting, TagListSetting, TextSetting, ToggleSetting } from "./field-controls";
 import { LLM_MODEL_OPTIONS } from "@/lib/constants";
 import { urlError } from "@/lib/validation";
-import type { PostCallAnalysisItem, RetellAgent, RetellLlm, SessionTool } from "@/types/retell";
+import type {
+  PostCallAnalysisFieldType,
+  PostCallAnalysisItem,
+  RetellAgent,
+  RetellLlm,
+  RetellLlmTool,
+  SessionTool,
+} from "@/types/retell";
 
 type PanelKey = "agent" | "pre" | "post" | "extraction" | "memory" | "kb" | "webhook";
 
@@ -89,6 +102,82 @@ function hiddenHandles() {
   );
 }
 
+interface AddOption {
+  key: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+/** "Add" button on a block. The menu is portalled so neighbouring blocks never cover it. */
+function AddMenu({ options, onPick }: { options: AddOption[]; onPick: (key: string) => void }) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!pos) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as globalThis.Node;
+      if (!btnRef.current?.contains(t) && !menuRef.current?.contains(t)) setPos(null);
+    };
+    const close = () => setPos(null);
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("wheel", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("wheel", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [pos]);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (pos) return setPos(null);
+          const r = btnRef.current?.getBoundingClientRect();
+          if (r) setPos({ top: r.bottom + 4, left: r.left });
+        }}
+        className="nodrag nopan inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+      >
+        <Plus className="w-3 h-3" />
+        Add
+        <ChevronDown className="w-3 h-3 text-gray-400" />
+      </button>
+      {pos &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ position: "fixed", top: pos.top, left: pos.left }}
+            // Portalled events still bubble through React to the block, which would reselect it.
+            onClick={(e) => e.stopPropagation()}
+            className="z-[100] w-52 rounded-xl border border-gray-200 bg-white shadow-lg py-1"
+          >
+            {options.map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                onClick={() => {
+                  setPos(null);
+                  onPick(o.key);
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50 text-left"
+              >
+                <o.icon className="w-4 h-4 text-gray-400" />
+                {o.label}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
+    </>
+  );
+}
+
 function BlockCard({ data }: NodeProps<BlockNode>) {
   const d = data as BlockData & {
     title: string;
@@ -97,6 +186,8 @@ function BlockCard({ data }: NodeProps<BlockNode>) {
     description?: string;
     rows?: { label: string; icon: React.ComponentType<{ className?: string }> }[];
     footer?: React.ReactNode;
+    addOptions?: AddOption[];
+    onAdd?: (key: string) => void;
     toggle?: { on: boolean; label: string; onToggle: () => void; busy: boolean };
   };
   const Icon = d.icon;
@@ -156,12 +247,9 @@ function BlockCard({ data }: NodeProps<BlockNode>) {
             )}
           </ul>
         )}
-        {d.footer !== undefined && (
+        {d.addOptions && d.onAdd && (
           <div className="flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-[11px] text-gray-600">
-              <Plus className="w-3 h-3" />
-              Add
-            </span>
+            <AddMenu options={d.addOptions} onPick={d.onAdd} />
             {d.footer}
           </div>
         )}
@@ -214,6 +302,9 @@ export interface AgentOverviewCanvasProps {
   kbPanel: React.ReactNode;
   kbCount: number;
   onEditPrompt: () => void;
+  /** Saves changes to the agent's LLM (functions, model, prompt). */
+  onUpdateLlm: (data: Partial<RetellLlm>) => Promise<void> | void;
+  llmSaving: boolean;
 }
 
 export function AgentOverviewCanvas(props: AgentOverviewCanvasProps) {
@@ -224,8 +315,21 @@ export function AgentOverviewCanvas(props: AgentOverviewCanvasProps) {
   );
 }
 
-function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPrompt }: AgentOverviewCanvasProps) {
-  const [panel, setPanel] = useState<PanelKey | null>(null);
+function Inner({
+  agent,
+  llm,
+  isSaving,
+  onUpdateAgent,
+  kbPanel,
+  kbCount,
+  onEditPrompt,
+  onUpdateLlm,
+  llmSaving,
+}: AgentOverviewCanvasProps) {
+  const [state, setState] = useState<{ key: PanelKey; add?: string; nonce: number } | null>(null);
+  const panel = state?.key ?? null;
+  const openPanel = (key: PanelKey, add?: string) =>
+    setState((prev) => ({ key, add, nonce: (prev?.nonce ?? 0) + 1 }));
 
   const pre = (agent.pre_session_tools ?? []) as SessionTool[];
   const post = (agent.post_session_tools ?? []) as SessionTool[];
@@ -234,7 +338,18 @@ function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPr
   const webhookCount = agent.webhook_url ? 1 : 0;
   const analysisModel = agent.post_call_analysis_model ?? "gpt-4.1";
 
-  const select = (k: PanelKey) => setPanel(k);
+  const select = (k: PanelKey) => openPanel(k);
+  const toolOptions = (post: boolean): AddOption[] => [
+    { key: "code", label: "Code", icon: Code2 },
+    { key: "custom", label: "Custom function", icon: Wrench },
+    ...(post ? [{ key: "send_sms", label: "Send SMS", icon: MessageSquareText }] : []),
+  ];
+  const analysisOptions: AddOption[] = [
+    { key: "string", label: "Text", icon: Type },
+    { key: "enum", label: "Selector", icon: List },
+    { key: "boolean", label: "Boolean", icon: ToggleLeft },
+    { key: "number", label: "Number", icon: Hash },
+  ];
   const base = (k: PanelKey) => ({ panel: k, selected: panel === k, onSelect: select });
 
   const nodes: BlockNode[] = [
@@ -252,6 +367,8 @@ function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPr
         description: pre.length ? undefined : "Look up data before the call starts, so your agent has context before it speaks.",
         rows: pre.map((t) => ({ label: t.name, icon: toolMeta(t.type).icon })),
         footer: null,
+        addOptions: toolOptions(false),
+        onAdd: (k: string) => openPanel("pre", k),
       } as never,
     },
     {
@@ -288,7 +405,7 @@ function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPr
     {
       id: "memory",
       type: "block",
-      position: { x: 900, y: 10 },
+      position: { x: 900, y: -70 },
       draggable: false,
       data: {
         ...base("memory"),
@@ -310,7 +427,7 @@ function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPr
     {
       id: "extraction",
       type: "block",
-      position: { x: 900, y: 140 },
+      position: { x: 900, y: 120 },
       draggable: false,
       data: {
         ...base("extraction"),
@@ -318,6 +435,8 @@ function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPr
         tone: "bg-emerald-50 text-emerald-800 border-emerald-200",
         icon: ScanSearch,
         rows: analysis.map(analysisRow),
+        addOptions: analysisOptions,
+        onAdd: (k: string) => openPanel("extraction", k),
         footer: (
           <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
             <ModelGlyph model={analysisModel} className="w-3.5 h-3.5" />
@@ -339,6 +458,8 @@ function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPr
         description: post.length ? undefined : "Update your systems after the call ends, like logging the outcome or creating follow-ups.",
         rows: post.map((t) => ({ label: t.name, icon: toolMeta(t.type).icon })),
         footer: null,
+        addOptions: toolOptions(true),
+        onAdd: (k: string) => openPanel("post", k),
       } as never,
     },
   ];
@@ -371,7 +492,7 @@ function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPr
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
-          onPaneClick={() => setPanel(null)}
+          onPaneClick={() => setState(null)}
           fitView
           fitViewOptions={{ padding: 0.12, maxZoom: 1 }}
           minZoom={0.3}
@@ -418,6 +539,21 @@ function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPr
             <Button size="sm" icon={FileText} onClick={onEditPrompt}>
               Edit prompt
             </Button>
+
+            <div className="pt-3 border-t border-gray-100">
+              <h4 className="text-[13px] font-semibold text-gray-900 -mx-4 px-4">Functions</h4>
+              {llm ? (
+                <div className="-mx-4">
+                  <FunctionsEditor
+                    tools={(llm.general_tools ?? []) as RetellLlmTool[]}
+                    isSaving={llmSaving}
+                    onSave={(tools) => void onUpdateLlm({ general_tools: tools })}
+                  />
+                </div>
+              ) : (
+                <p className="text-[12px] text-gray-400 mt-2">Loading functions...</p>
+              )}
+            </div>
           </div>
         )}
 
@@ -427,8 +563,9 @@ function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPr
               {panel === "pre" ? "Pre-call functions" : "Post-call functions"}
             </h3>
             <SessionToolsEditor
-              key={panel}
+              key={state?.nonce}
               kind={panel}
+              startAdd={state?.add as "custom" | "code" | "send_sms" | undefined}
               tools={panel === "pre" ? pre : post}
               isSaving={isSaving}
               onSave={(tools) =>
@@ -454,9 +591,11 @@ function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPr
               />
             </div>
             <PostCallAnalysisEditor
+              key={state?.nonce}
               items={analysis}
               isSaving={isSaving}
-              onSave={(items) => void onUpdateAgent({ post_call_analysis_data: items })}
+              openWithType={state?.add as PostCallAnalysisFieldType | undefined}
+              onSave={(items) => onUpdateAgent({ post_call_analysis_data: items })}
             />
           </div>
         )}

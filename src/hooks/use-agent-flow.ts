@@ -25,6 +25,23 @@ export interface FlowNodeData {
   [k: string]: unknown;
 }
 
+/** A function the flow can call. Function nodes point at one by `tool_id`. */
+export interface FlowToolData {
+  tool_id: string;
+  type: string;
+  name: string;
+  description?: string;
+  url?: string;
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  headers?: Record<string, string>;
+  parameters?: unknown;
+  response_variables?: Record<string, string>;
+  timeout_ms?: number;
+  speak_during_execution?: boolean;
+  speak_after_execution?: boolean;
+  [k: string]: unknown;
+}
+
 export interface FlowNoteData {
   id: string;
   content: string;
@@ -41,6 +58,7 @@ export interface ConversationFlowData {
   flex_mode?: boolean;
   model_choice?: { type: string; model?: string; [k: string]: unknown };
   knowledge_base_ids?: string[] | null;
+  tools?: FlowToolData[] | null;
   nodes: FlowNodeData[];
   notes?: FlowNoteData[] | null;
   [k: string]: unknown;

@@ -71,7 +71,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function KeyValueEditor({
+export function KeyValueEditor({
   value,
   onChange,
   keyPlaceholder,
@@ -121,8 +121,8 @@ function KeyValueEditor({
   );
 }
 
-const toPairs = (o?: Record<string, string>): [string, string][] => Object.entries(o ?? {});
-const fromPairs = (p: [string, string][]): Record<string, string> =>
+export const toPairs = (o?: Record<string, string>): [string, string][] => Object.entries(o ?? {});
+export const fromPairs = (p: [string, string][]): Record<string, string> =>
   Object.fromEntries(p.filter(([k]) => k.trim()).map(([k, v]) => [k.trim(), v]));
 
 function ToolForm({
@@ -505,14 +505,19 @@ export function SessionToolsEditor({
   kind,
   isSaving,
   onSave,
+  startAdd,
 }: {
   tools: SessionTool[];
   kind: "pre" | "post";
   isSaving?: boolean;
+  /** Open the form for a new function of this kind straight away. */
+  startAdd?: "custom" | "code" | "send_sms";
   /** Resolves to false when saving failed so the form stays open. */
   onSave: (tools: SessionTool[]) => Promise<boolean | void> | boolean | void;
 }) {
-  const [editing, setEditing] = useState<{ index: number | null; tool: SessionTool } | null>(null);
+  const [editing, setEditing] = useState<{ index: number | null; tool: SessionTool } | null>(() =>
+    startAdd ? { index: null, tool: newTool(startAdd, tools) } : null
+  );
   const [menuOpen, setMenuOpen] = useState(false);
 
   const addKinds: ("custom" | "code" | "send_sms")[] =

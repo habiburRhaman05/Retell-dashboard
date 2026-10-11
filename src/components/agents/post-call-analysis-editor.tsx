@@ -16,13 +16,17 @@ export function PostCallAnalysisEditor({
   items,
   onSave,
   isSaving,
+  openWithType,
 }: {
   items: PostCallAnalysisItem[];
-  onSave: (items: PostCallAnalysisItem[]) => void;
+  /** May resolve to false when saving failed, so the form stays open. */
+  onSave: (items: PostCallAnalysisItem[]) => void | boolean | Promise<void | boolean>;
   isSaving?: boolean;
+  /** Open the add form straight away, with this field type selected. */
+  openWithType?: PostCallAnalysisFieldType;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(!!openWithType);
 
   const startAdd = () => {
     setEditingIndex(null);
@@ -34,12 +38,11 @@ export function PostCallAnalysisEditor({
     setShowForm(true);
   };
 
-  const handleSubmit = (item: PostCallAnalysisItem) => {
-    if (editingIndex === null) {
-      onSave([...items, item]);
-    } else {
-      onSave(items.map((it, i) => (i === editingIndex ? item : it)));
-    }
+  const handleSubmit = async (item: PostCallAnalysisItem) => {
+    const next =
+      editingIndex === null ? [...items, item] : items.map((it, i) => (i === editingIndex ? item : it));
+    const ok = await onSave(next);
+    if (ok === false) return;
     setShowForm(false);
     setEditingIndex(null);
   };
@@ -104,6 +107,7 @@ export function PostCallAnalysisEditor({
       {showForm ? (
         <AnalysisItemForm
           initial={editingIndex !== null ? items[editingIndex] : undefined}
+          initialType={openWithType}
           existingNames={items
             .filter((_, i) => i !== editingIndex)
             .map((it) => it.name)}
@@ -129,20 +133,22 @@ export function PostCallAnalysisEditor({
 
 function AnalysisItemForm({
   initial,
+  initialType,
   existingNames,
   onSubmit,
   onCancel,
   isSaving,
 }: {
   initial?: PostCallAnalysisItem;
+  initialType?: PostCallAnalysisFieldType;
   existingNames: string[];
-  onSubmit: (item: PostCallAnalysisItem) => void;
+  onSubmit: (item: PostCallAnalysisItem) => void | Promise<void>;
   onCancel: () => void;
   isSaving?: boolean;
 }) {
   const [name, setName] = useState(initial?.name || "");
   const [description, setDescription] = useState(initial?.description || "");
-  const [type, setType] = useState<PostCallAnalysisFieldType>(initial?.type || "string");
+  const [type, setType] = useState<PostCallAnalysisFieldType>(initial?.type || initialType || "string");
   const [choicesInput, setChoicesInput] = useState((initial?.choices || []).join(", "));
   const [error, setError] = useState<string | null>(null);
 
@@ -204,8 +210,8 @@ function AnalysisItemForm({
             className={cn(
               "px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors",
               type === t
-                ? "border-brand-500 bg-brand-50 text-brand-600"
-                : "border-gray-200 text-gray-500 hover:border-gray-300"
+                ? "border-brand-500 bg-brand-500 text-white shadow-sm"
+                : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
             )}
           >
             {TYPE_LABELS[t]}

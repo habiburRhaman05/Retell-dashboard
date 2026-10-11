@@ -29,6 +29,7 @@ import { SaveButton } from "@/components/agents/save-button";
 import { EditableTitle } from "@/components/agents/editable-title";
 import { AgentOverviewCanvas } from "@/components/agents/agent-overview-canvas";
 import { useAgentFlow, useUpdateAgentFlow } from "@/hooks/use-agent-flow";
+import { useAgents } from "@/hooks/use-agents";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,6 +123,11 @@ export default function AgentDetailPage() {
   const { data: agent, isLoading, error } = useAgentDetail(agentId, locationId);
   const deleteAgentMut = useDeleteAgent(locationId);
   const updateAgentMut = useUpdateAgent(locationId);
+  const { data: allAgents } = useAgents(locationId);
+  // Voice agents this one can hand a call to (Agent transfer nodes).
+  const agentOptions = (allAgents ?? [])
+    .filter((a) => a.channel !== "chat" && a.agent_id !== agentId)
+    .map((a) => ({ id: a.agent_id, name: a.agent_name || a.agent_id }));
 
   const llmId = agent?.response_engine?.llm_id;
   const { data: llm, isLoading: llmLoading } = useQuery<RetellLlm>({
@@ -572,6 +578,7 @@ export default function AgentDetailPage() {
               {flow && (
                 <WorkflowEditor
                   ref={flowRef}
+                  agentOptions={agentOptions}
                   onDirtyChange={setFlowDirty}
                   flow={flow}
                   isSaving={updateFlowMut.isPending}
@@ -594,6 +601,8 @@ export default function AgentDetailPage() {
                 kbPanel={kbSelector}
                 kbCount={(llm?.knowledge_base_ids ?? []).length}
                 onEditPrompt={() => setTab("prompt")}
+                onUpdateLlm={handleUpdateLlm}
+                llmSaving={updateLlmMut.isPending}
               />
             </div>
           )}

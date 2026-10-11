@@ -1,5 +1,5 @@
-import type { FlowEdgeData, FlowNodeData } from "@/hooks/use-agent-flow";
-import { phoneError } from "@/lib/validation";
+import type { FlowEdgeData, FlowNodeData, FlowToolData } from "@/hooks/use-agent-flow";
+import { phoneError, toolNameError, urlError } from "@/lib/validation";
 
 /** Edge fields that hold a single transition. `edges` is the repeatable list. */
 export const SINGLE_EDGE_FIELDS = [
@@ -76,14 +76,14 @@ export interface NodeMeta {
 export const NODE_META: Record<string, NodeMeta> = {
   conversation: { label: "Conversation", tone: "bg-pink-50 text-pink-700 border-pink-200", creatable: true },
   subagent: { label: "Subagent", tone: "bg-emerald-50 text-emerald-700 border-emerald-200", creatable: false },
-  function: { label: "Function", tone: "bg-violet-50 text-violet-700 border-violet-200", creatable: false },
+  function: { label: "Function", tone: "bg-violet-50 text-violet-700 border-violet-200", creatable: true },
   transfer_call: { label: "Call Transfer", tone: "bg-amber-50 text-amber-700 border-amber-200", creatable: true },
   press_digit: { label: "Press Digit", tone: "bg-sky-50 text-sky-700 border-sky-200", creatable: true },
   branch: { label: "Logic Split", tone: "bg-indigo-50 text-indigo-700 border-indigo-200", creatable: true },
-  agent_swap: { label: "Agent Transfer", tone: "bg-orange-50 text-orange-700 border-orange-200", creatable: false },
-  sms: { label: "In-Call SMS", tone: "bg-yellow-50 text-yellow-700 border-yellow-200", creatable: false },
+  agent_swap: { label: "Agent Transfer", tone: "bg-orange-50 text-orange-700 border-orange-200", creatable: true },
+  sms: { label: "In-Call SMS", tone: "bg-yellow-50 text-yellow-700 border-yellow-200", creatable: true },
   extract_dynamic_variables: { label: "Extract Variable", tone: "bg-slate-50 text-slate-700 border-slate-200", creatable: true },
-  code: { label: "Code", tone: "bg-gray-50 text-gray-700 border-gray-200", creatable: false },
+  code: { label: "Code", tone: "bg-gray-50 text-gray-700 border-gray-200", creatable: true },
   mcp: { label: "MCP", tone: "bg-blue-50 text-blue-700 border-blue-200", creatable: false },
   end: { label: "Ending", tone: "bg-teal-50 text-teal-700 border-teal-200", creatable: true },
   component: { label: "Subflow", tone: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", creatable: false },
@@ -124,17 +124,25 @@ export function allIds(nodes: FlowNodeData[]): Set<string> {
 
 export type CreatableKind =
   | "conversation"
+  | "function"
+  | "code"
+  | "sms"
   | "end"
   | "branch"
   | "press_digit"
   | "transfer_call"
+  | "agent_swap"
   | "extract_dynamic_variables";
 
 export const PALETTE: CreatableKind[] = [
   "conversation",
+  "function",
+  "code",
+  "sms",
   "branch",
   "press_digit",
   "transfer_call",
+  "agent_swap",
   "extract_dynamic_variables",
   "end",
 ];
@@ -156,14 +164,16 @@ function edgeOf(
 export function createNodes(
   kind: CreatableKind,
   existing: FlowNodeData[],
-  position: { x: number; y: number }
-): FlowNodeData[] {
+  position: { x: number; y: number },
+  existingTools: FlowToolData[] = []
+): { nodes: FlowNodeData[]; tools: FlowToolData[] } {
   const taken = allIds(existing);
   const id = randomId(kind === "extract_dynamic_variables" ? "extract" : kind, taken);
   taken.add(id);
   const added: FlowNodeData[] = [];
 
-  const needsFallback = kind === "branch" || kind === "transfer_call";
+  const needsFallback = kind === "branch" || kind === "transfer_call" || kind === "sms" || kind === "agent_swap";
+  const newTools: FlowToolData[] = [];
   let fallbackId = existing.find((n) => n.type === "end")?.id;
   if (needsFallback && !fallbackId) {
     fallbackId = randomId("end", taken);
@@ -188,6 +198,47 @@ export function createNodes(
     case "branch":
       node = { id, type: "branch", name: "Logic split", edges: [], else_edge: edgeOf(taken, "Else", fallbackId!) };
       break;
+    case "function": {
+      const toolIds = new Set(existingTools.map((t) => t.tool_id));
+      const toolId = randomId("tool", toolIds);
+      const names = existingTools.map((t) => t.name);
+      let n = 1;
+      while (names.includes(`custom_function_${n}`)) n++;
+      newTools.push({ tool_id: toolId, type: "custom", name: `custom_function_${n}`, url: "", method: "POST" });
+      node = {
+        id,
+        type: "function",
+        name: "Custom function",
+        tool_id: toolId,
+        tool_type: "local",
+        wait_for_result: true,
+        edges: [],
+      };
+      break;
+    }
+    case "code":
+      node = { id, type: "code", name: "Code", code: "return {};", wait_for_result: true, edges: [] };
+      break;
+    case "sms":
+      node = {
+        id,
+        type: "sms",
+        name: "Send SMS",
+        instruction: { type: "static_text", text: "" },
+        success_edge: edgeOf(taken, "Sent successfully", fallbackId!),
+        failed_edge: edgeOf(taken, "Failed to send", fallbackId!),
+      };
+      break;
+    case "agent_swap":
+      node = {
+        id,
+        type: "agent_swap",
+        name: "Agent transfer",
+        agent_id: "",
+        post_call_analysis_setting: "both_agents",
+        edge: edgeOf(taken, "Transfer failed", fallbackId!),
+      };
+      break;
     case "press_digit":
       node = { id, type: "press_digit", name: "Press digit", instruction: { type: "prompt", text: "Press 1 to continue" }, edges: [] };
       break;
@@ -211,7 +262,54 @@ export function createNodes(
       };
   }
   node.display_position = position;
-  return [node, ...added];
+  return { nodes: [node, ...added], tools: newTools };
+}
+
+/** Copy of a node (and of its function, if it has one) placed just below the original. */
+export function duplicateNode(
+  node: FlowNodeData,
+  nodes: FlowNodeData[],
+  tools: FlowToolData[]
+): { node: FlowNodeData; tool?: FlowToolData } {
+  const taken = allIds(nodes);
+  const id = randomId(node.type, taken);
+  taken.add(id);
+  const copy: FlowNodeData = JSON.parse(JSON.stringify(node));
+  copy.id = id;
+  copy.name = `${nodeTitle(node)} copy`;
+  copy.display_position = {
+    x: (node.display_position?.x ?? 0) + 40,
+    y: (node.display_position?.y ?? 0) + 60,
+  };
+  if (copy.edges) copy.edges = copy.edges.map((e) => ({ ...e, id: (() => { const n = randomId("edge", taken); taken.add(n); return n; })() }));
+  for (const f of SINGLE_EDGE_FIELDS) {
+    const e = copy[f] as FlowEdgeData | undefined;
+    if (e && typeof e === "object") {
+      const n = randomId("edge", taken);
+      taken.add(n);
+      copy[f] = { ...e, id: n } as never;
+    }
+  }
+  let tool: FlowToolData | undefined;
+  const src = node.type === "function" ? tools.find((t) => t.tool_id === node.tool_id) : undefined;
+  if (src) {
+    const toolId = randomId("tool", new Set(tools.map((t) => t.tool_id)));
+    let n = 1;
+    while (tools.some((t) => t.name === `${src.name}_${n}`)) n++;
+    tool = { ...JSON.parse(JSON.stringify(src)), tool_id: toolId, name: `${src.name}_${n}` };
+    copy.tool_id = toolId;
+  }
+  return { node: copy, tool };
+}
+
+/** Drops functions that no node refers to any more. */
+export function pruneTools(nodes: FlowNodeData[], tools: FlowToolData[], candidateIds: string[]): FlowToolData[] {
+  const used = new Set<string>();
+  for (const n of nodes) {
+    if (typeof n.tool_id === "string") used.add(n.tool_id);
+    if (Array.isArray(n.tool_ids)) for (const t of n.tool_ids as string[]) used.add(t);
+  }
+  return tools.filter((t) => !candidateIds.includes(t.tool_id) || used.has(t.tool_id));
 }
 
 /** Assigns a left-to-right layered layout, starting from the start node. */
@@ -253,7 +351,11 @@ export function withPositions(nodes: FlowNodeData[], startId: string | null | un
   return missing ? autoLayout(nodes, startId) : nodes;
 }
 
-export function validateFlow(nodes: FlowNodeData[], startId: string | null | undefined): string[] {
+export function validateFlow(
+  nodes: FlowNodeData[],
+  startId: string | null | undefined,
+  tools: FlowToolData[] = []
+): string[] {
   const problems: string[] = [];
   const ids = new Set(nodes.map((n) => n.id));
   if (nodes.length === 0) problems.push("The workflow needs at least one node.");
@@ -278,8 +380,31 @@ export function validateFlow(nodes: FlowNodeData[], startId: string | null | und
     ) {
       problems.push(`"${title}": add an instruction.`);
     }
+    if (n.type === "function") {
+      const tool = tools.find((t) => t.tool_id === n.tool_id);
+      if (!tool) {
+        problems.push(`"${title}": its function is missing.`);
+      } else {
+        const nameMsg = toolNameError(tool.name, tools.filter((t) => t.tool_id !== tool.tool_id).map((t) => t.name));
+        if (nameMsg) problems.push(`"${title}": ${nameMsg.charAt(0).toLowerCase()}${nameMsg.slice(1)}.`);
+        const urlMsg = tool.type === "custom" ? urlError(tool.url ?? "") : null;
+        if (urlMsg) problems.push(`"${title}": ${urlMsg.charAt(0).toLowerCase()}${urlMsg.slice(1)}.`);
+      }
+    }
+    if (n.type === "code" && !String(n.code ?? "").trim()) {
+      problems.push(`"${title}": add the code to run.`);
+    }
+    if (n.type === "sms" && n.instruction?.type !== "template" && !n.instruction?.text?.trim()) {
+      problems.push(`"${title}": add the SMS text or prompt.`);
+    }
+    if (n.type === "agent_swap" && !String(n.agent_id ?? "").trim()) {
+      problems.push(`"${title}": choose the agent to transfer to.`);
+    }
     if (n.type === "transfer_call") {
       const dest = n.transfer_destination as { type?: string; number?: string } | undefined;
+      if (dest?.type === "inferred" && !(dest as { prompt?: string }).prompt?.trim()) {
+        problems.push(`"${title}": describe how to find the number to transfer to.`);
+      }
       if (dest?.type === "predefined") {
         const msg = phoneError(dest.number ?? "", { required: true });
         if (msg) problems.push(`"${title}": ${msg.charAt(0).toLowerCase()}${msg.slice(1)}.`);
