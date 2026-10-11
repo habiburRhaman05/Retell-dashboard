@@ -339,6 +339,7 @@ export async function createAgentRaw(data: Record<string, unknown>): Promise<Ret
 interface ChatAgentSummary {
   agent_id: string;
   agent_name?: string;
+  language?: string | string[] | null;
   response_engine: RetellAgent["response_engine"];
 }
 
@@ -366,10 +367,17 @@ export async function getOrCreateTestChatAgent(voiceAgentId: string): Promise<st
       existing.response_engine.llm_id === engine.llm_id &&
       existing.response_engine.conversation_flow_id === engine.conversation_flow_id &&
       existing.response_engine.version === engine.version;
-    if (!same) {
+    // The language must match too: Retell tells the model which languages the
+    // agent speaks, so a test chat left on English would answer in English only.
+    const sameLanguage =
+      JSON.stringify(existing.language ?? "en-US") === JSON.stringify(voiceAgent.language ?? "en-US");
+    if (!same || !sameLanguage) {
       await retellFetch(`/update-chat-agent/${existing.agent_id}`, {
         method: "PATCH",
-        body: JSON.stringify({ response_engine: engine }),
+        body: JSON.stringify({
+          response_engine: engine,
+          ...(voiceAgent.language ? { language: voiceAgent.language } : {}),
+        }),
       });
     }
     return existing.agent_id;
@@ -380,6 +388,7 @@ export async function getOrCreateTestChatAgent(voiceAgentId: string): Promise<st
     body: JSON.stringify({
       agent_name: `${voiceAgent.agent_name ?? "Agent"}${testChatSuffix(voiceAgentId)}`,
       response_engine: engine,
+      ...(voiceAgent.language ? { language: voiceAgent.language } : {}),
     }),
   });
   return created.agent_id;
