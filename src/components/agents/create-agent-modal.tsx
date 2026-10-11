@@ -20,6 +20,8 @@ import { useToast } from "@/components/layout/toast";
 import { useCreateAgentFromTemplate } from "@/hooks/use-agents";
 import { useLocationName } from "@/hooks/use-location-name";
 import { withLocationName } from "@/lib/naming";
+import { duplicateAgentMessage, findDuplicateAgent } from "@/lib/agent-names";
+import { useAgents } from "@/hooks/use-agents";
 import {
   AGENT_TEMPLATES,
   TEMPLATE_CATEGORIES,
@@ -43,6 +45,7 @@ export function CreateAgentModal({
   const { toast } = useToast();
   const createAgent = useCreateAgentFromTemplate(locationId);
   const { data: locationName } = useLocationName(locationId);
+  const { data: existingAgents } = useAgents(locationId);
 
   const [channel, setChannel] = useState<Channel>("voice");
   const [type, setType] = useState<AgentType>("single");
@@ -85,6 +88,11 @@ export function CreateAgentModal({
     const trimmed = name.trim();
     if (!trimmed) {
       setNameError("Give your agent a name");
+      return;
+    }
+    const finalName = withLocationName(trimmed, locationName).full;
+    if (findDuplicateAgent(finalName, existingAgents)) {
+      setNameError(duplicateAgentMessage(finalName));
       return;
     }
     setNameError(null);

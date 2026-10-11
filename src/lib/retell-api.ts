@@ -483,14 +483,14 @@ export async function listAllAgents(): Promise<RetellAgent[]> {
     // this list, so a failed chat listing would wrongly orphan every text agent.
     retellFetch<RetellAgent[]>("/list-chat-agents"),
   ]);
-  const seen = new Set<string>();
-  const out: RetellAgent[] = [];
+  // Retell returns every version of an agent as its own row. Keep the newest
+  // one, so names and settings are the current ones.
+  const latest = new Map<string, RetellAgent>();
   for (const a of [...voice, ...chat]) {
-    if (seen.has(a.agent_id)) continue;
-    seen.add(a.agent_id);
-    out.push(a);
+    const cur = latest.get(a.agent_id);
+    if (!cur || (a.version ?? 0) > (cur.version ?? 0)) latest.set(a.agent_id, a);
   }
-  return out;
+  return [...latest.values()];
 }
 
 // ---- AI simulated chats (Retell test cases + batch tests) -------------------

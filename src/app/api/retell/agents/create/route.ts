@@ -4,6 +4,8 @@ import * as retell from "@/lib/retell-api";
 import { buildFlowPayload, fillTemplate, getTemplate } from "@/lib/agent-templates";
 import { getLocationName } from "@/lib/location-name";
 import { withLocationName } from "@/lib/naming";
+import { nameTakenInLocation } from "@/lib/agent-name-check";
+import { duplicateAgentMessage } from "@/lib/agent-names";
 
 interface CreateBody {
   locationId?: string;
@@ -65,6 +67,9 @@ export async function POST(request: NextRequest) {
     // name, and the business name falls back to the location's name.
     const locationName = await getLocationName(locationId);
     const agentName = withLocationName(name, locationName).full;
+    if (await nameTakenInLocation(locationId, agentName)) {
+      return NextResponse.json({ error: duplicateAgentMessage(agentName) }, { status: 409 });
+    }
     const business = body.businessName?.trim() || locationName || "";
 
     const template = body.templateId ? getTemplate(body.templateId) : undefined;

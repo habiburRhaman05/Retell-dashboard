@@ -10,12 +10,15 @@ export function EditableTitle({
   value,
   placeholder = "Unnamed Agent",
   onSave,
+  isTaken,
   className,
 }: {
   value: string;
   placeholder?: string;
-  /** Resolve to false when saving failed. */
-  onSave: (name: string) => Promise<boolean>;
+  /** Resolve to true when saved, or to a message (or false) when it failed. */
+  onSave: (name: string) => Promise<boolean | string>;
+  /** Names already taken, checked as you type. */
+  isTaken?: (name: string) => boolean;
   className?: string;
 }) {
   const [editing, setEditing] = useState(false);
@@ -57,11 +60,15 @@ export function EditableTitle({
       setEditing(false);
       return;
     }
+    if (isTaken?.(name)) {
+      setError(`An agent named "${name}" already exists here. Choose a different name.`);
+      return;
+    }
     setSaving(true);
-    const ok = await onSave(name);
+    const result = await onSave(name);
     setSaving(false);
-    if (ok) setEditing(false);
-    else setError("Could not rename the agent. Try again.");
+    if (result === true) setEditing(false);
+    else setError(typeof result === "string" ? result : "Could not rename the agent. Try again.");
   };
 
   if (!editing) {

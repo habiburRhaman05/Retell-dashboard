@@ -37,6 +37,7 @@ import { LLM_MODEL_OPTIONS, S2S_MODEL_OPTIONS } from "@/lib/constants";
 import { modelIcon } from "@/components/agents/model-icons";
 import { getTimezoneOptions } from "@/lib/timezones";
 import { urlError } from "@/lib/validation";
+import { findDuplicateAgent } from "@/lib/agent-names";
 import { VoiceField, LanguageField } from "@/components/agents/voice-language-fields";
 import {
   ArrowLeft,
@@ -293,6 +294,20 @@ export default function AgentDetailPage() {
     [updateLlmMut, toast]
   );
 
+  // Rename reports the reason itself (for example "name already exists") so the
+  // title editor can show it next to the field instead of a generic toast.
+  const renameAgent = async (name: string): Promise<boolean | string> => {
+    try {
+      const updated = await updateAgentMut.mutateAsync({ agentId, data: { agent_name: name } });
+      if (updated?.agent_id) queryClient.setQueryData(["agent", agentId], updated);
+      queryClient.invalidateQueries({ queryKey: ["agent", agentId] });
+      toast("Agent renamed", "success");
+      return true;
+    } catch (err) {
+      return err instanceof Error ? err.message : false;
+    }
+  };
+
   const handleModelChange = (v: string) =>
     v.startsWith("s2s:")
       ? handleUpdateLlm({ s2s_model: v.slice(4), model: null })
@@ -409,7 +424,8 @@ export default function AgentDetailPage() {
                 <h1 className="text-lg font-semibold text-gray-900 tracking-tight min-w-0">
                   <EditableTitle
                     value={agent.agent_name || ""}
-                    onSave={(name) => handleUpdateAgent({ agent_name: name })}
+                    isTaken={(name) => !!findDuplicateAgent(name, allAgents, agentId)}
+                    onSave={renameAgent}
                   />
                 </h1>
                 <Badge variant={agent.is_published ? "success" : "warning"} dot>

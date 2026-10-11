@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
 import { getLocationName } from "@/lib/location-name";
 import { withLocationName } from "@/lib/naming";
+import { nameTakenInLocation } from "@/lib/agent-name-check";
+import { duplicateAgentMessage } from "@/lib/agent-names";
 
 export async function GET(request: NextRequest) {
   const locationId = request.nextUrl.searchParams.get("locationId");
@@ -66,6 +68,9 @@ export async function POST(request: NextRequest) {
 
     if (typeof agentData.agent_name === "string" && agentData.agent_name.trim()) {
       agentData.agent_name = withLocationName(agentData.agent_name, await getLocationName(locationId)).full;
+      if (await nameTakenInLocation(locationId, agentData.agent_name)) {
+        return NextResponse.json({ error: duplicateAgentMessage(agentData.agent_name) }, { status: 409 });
+      }
     }
 
     const tags = [`loc:${locationId}`];

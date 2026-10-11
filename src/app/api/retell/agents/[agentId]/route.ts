@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
+import { nameTakenInLocation } from "@/lib/agent-name-check";
+import { duplicateAgentMessage } from "@/lib/agent-names";
 
 async function verifyOwnership(locationId: string, agentId: string) {
   const mapping = await prisma.locationAgent.findUnique({
@@ -60,6 +62,17 @@ export async function PATCH(
     const hasAccess = await verifyOwnership(locationId, agentId);
     if (!hasAccess) {
       return NextResponse.json({ error: "Agent not found" }, { status: 403 });
+    }
+
+    if (typeof updateData.agent_name === "string") {
+      const newName = updateData.agent_name.trim();
+      if (!newName) {
+        return NextResponse.json({ error: "The agent name cannot be empty" }, { status: 400 });
+      }
+      if (await nameTakenInLocation(locationId, newName, agentId)) {
+        return NextResponse.json({ error: duplicateAgentMessage(newName) }, { status: 409 });
+      }
+      updateData.agent_name = newName;
     }
 
     const agent = await retell.updateAnyAgent(agentId, updateData);
