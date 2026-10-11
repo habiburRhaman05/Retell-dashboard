@@ -492,3 +492,59 @@ export async function listAllAgents(): Promise<RetellAgent[]> {
   }
   return out;
 }
+
+// ---- AI simulated chats (Retell test cases + batch tests) -------------------
+
+export type SimulationEngine = {
+  type: "retell-llm" | "conversation-flow";
+  llm_id?: string;
+  conversation_flow_id?: string;
+  version?: number | null;
+};
+
+export interface TestRun {
+  test_case_job_id: string;
+  status: "pending" | "in_progress" | "pass" | "fail" | "error";
+  test_case_definition_id: string;
+  transcript_snapshot?: { transcript?: ChatMessage[] } | null;
+  result_explanation?: string | null;
+}
+
+export async function createTestCaseDefinition(data: {
+  name: string;
+  response_engine: SimulationEngine;
+  user_prompt: string;
+  metrics: string[];
+  dynamic_variables?: Record<string, string>;
+  llm_model?: string;
+}): Promise<{ test_case_definition_id: string }> {
+  return retellFetch("/create-test-case-definition", {
+    method: "POST",
+    body: JSON.stringify({ dynamic_variables: {}, tool_mocks: [], ...data }),
+  });
+}
+
+export async function deleteTestCaseDefinition(id: string): Promise<void> {
+  await retellFetch<void>(`/delete-test-case-definition/${id}`, { method: "DELETE" });
+}
+
+export async function createBatchTest(
+  definitionIds: string[],
+  engine: SimulationEngine
+): Promise<{ test_case_batch_job_id: string }> {
+  return retellFetch("/create-batch-test", {
+    method: "POST",
+    body: JSON.stringify({ test_case_definition_ids: definitionIds, response_engine: engine }),
+  });
+}
+
+export async function getBatchTest(
+  batchId: string
+): Promise<{ test_case_batch_job_id: string; response_engine: SimulationEngine }> {
+  return retellFetch(`/get-batch-test/${batchId}`);
+}
+
+export async function listTestRuns(batchId: string): Promise<TestRun[]> {
+  const res = await retellFetch<{ items: TestRun[] }>(`/v2/list-test-runs/${batchId}`);
+  return res.items ?? [];
+}
