@@ -10,11 +10,9 @@ import {
   Bot,
   BookOpen,
   BarChart3,
-  Settings,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { AccountMenu } from "@/components/layout/account-menu";
 
 interface NavLink {
   label: string;
@@ -87,7 +85,6 @@ export function TopNavbar() {
             </nav>
 
             <div className="ml-auto flex items-center gap-3">
-              <AccountMenu />
               <button
                 className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 onClick={() => setMobileOpen(true)}
@@ -140,21 +137,6 @@ export function TopNavbar() {
                 );
               })}
             </nav>
-            <div className="p-4 border-t border-gray-100">
-              <Link
-                href={`/retell/${locationId}/settings`}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150",
-                  pathname.includes("/settings")
-                    ? "text-white bg-brand-500"
-                    : "text-gray-600 hover:bg-gray-50"
-                )}
-              >
-                <Settings className={cn("w-4.5 h-4.5", pathname.includes("/settings") ? "text-white" : "text-gray-400")} />
-                Account settings
-              </Link>
-            </div>
           </div>
         </div>
       )}
