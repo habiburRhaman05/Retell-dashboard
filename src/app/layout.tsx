@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Retell AI Dashboard",
+  title: "AI Voice Agents Dashboard",
   description: "Manage your Voice AI agents",
 };
 

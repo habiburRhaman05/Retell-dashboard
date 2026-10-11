@@ -163,7 +163,7 @@ export default function KnowledgeBasePage() {
             description={
               search
                 ? "Try a different search term"
-                : "Import existing knowledge bases from your Retell account or create a new one"
+                : "Import existing knowledge bases or create a new one"
             }
             actionLabel={search ? undefined : "Import Knowledge Bases"}
             onAction={search ? undefined : () => setShowImport(true)}

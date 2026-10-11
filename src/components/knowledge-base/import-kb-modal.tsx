@@ -79,7 +79,7 @@ export function ImportKnowledgeBaseModal({
           <div>
             <h2 className="text-base font-semibold text-gray-900">Import Knowledge Bases</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Select knowledge bases from your Retell account to add to this location
+              Select knowledge bases to add to this location
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">

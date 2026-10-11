@@ -52,7 +52,7 @@ export function CreateKnowledgeBaseModal({
     const committedTotal = committed.files.length + committed.texts.length + committed.urls.length;
     if (committedTotal === 0) {
       setSourceError(
-        "Add at least one file, text entry, or URL - Retell requires a knowledge base to have a starting source"
+        "Add at least one file, text entry, or URL, so the knowledge base has something to start with"
       );
       return;
     }

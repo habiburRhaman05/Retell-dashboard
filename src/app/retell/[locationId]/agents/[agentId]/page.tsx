@@ -556,7 +556,7 @@ export default function AgentDetailPage() {
               {flowLoading && (
                 <div className="h-[420px] flex flex-col items-center justify-center gap-3 text-gray-500">
                   <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
-                  <p className="text-sm">Loading workflow from Retell...</p>
+                  <p className="text-sm">Loading workflow...</p>
                 </div>
               )}
               {flowError && (

@@ -519,8 +519,8 @@ function SimulatedChat({
         <div>
           <p className="text-[13px] font-semibold text-gray-900">AI simulated chat</p>
           <p className="text-[12px] text-gray-500 mt-0.5">
-            An AI plays the caller from your description and talks to the agent for you. Retell runs
-            it and grades the result.
+            An AI plays the caller from your description and talks to the agent for you, then
+            grades the result.
           </p>
         </div>
 
@@ -613,7 +613,7 @@ function SimulatedChat({
           Simulate conversation
         </Button>
         <p className="text-[11px] text-gray-400">
-          A run usually takes under a minute. Retell bills each simulated message like a normal chat
+          A run usually takes under a minute, and each simulated message is billed like a normal chat
           message. Dynamic variables from above are used too.
         </p>
       </div>
@@ -641,7 +641,7 @@ function SimulatedChat({
           <div className="rounded-xl border border-gray-200 bg-white px-4 py-5 text-center">
             <Loader2 className="w-6 h-6 animate-spin text-brand-500 mx-auto mb-2" />
             <p className="text-[13px] font-medium text-gray-800">
-              {result?.status === "in_progress" ? "The conversation is running..." : "Waiting for Retell to start..."}
+              {result?.status === "in_progress" ? "The conversation is running..." : "Starting the conversation..."}
             </p>
             <p className="text-[12px] text-gray-500 mt-1 inline-flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" />

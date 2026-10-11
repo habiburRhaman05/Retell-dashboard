@@ -620,7 +620,7 @@ function WorkflowEditorInner({
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-1">
               <p className="flex items-center gap-1.5 text-[12px] font-semibold text-red-700">
                 <AlertCircle className="w-3.5 h-3.5" />
-                {saveError ? "Retell rejected the workflow" : "Fix these before saving"}
+                {saveError ? "The workflow could not be saved" : "Fix these before saving"}
               </p>
               {saveError && <p className="text-[12px] text-red-600 break-words">{saveError}</p>}
               <ul className="list-disc pl-4 text-[12px] text-red-600 space-y-0.5">

@@ -9,7 +9,7 @@ import { useVoices } from "@/hooks/use-voices";
 import type { RetellVoice } from "@/types/retell";
 
 export const PROVIDER_LABELS: Record<string, string> = {
-  platform: "Retell",
+  platform: "Platform",
   elevenlabs: "ElevenLabs",
   cartesia: "Cartesia",
   minimax: "MiniMax",
@@ -314,7 +314,7 @@ export function VoicePickerModal({
         {isLoading && (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-gray-500">
             <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
-            <p className="text-sm">Loading voices from Retell...</p>
+            <p className="text-sm">Loading voices...</p>
           </div>
         )}
 

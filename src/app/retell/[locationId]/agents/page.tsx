@@ -375,7 +375,7 @@ export default function AgentsPage() {
             description={
               search
                 ? "Try a different search term"
-                : "Import existing agents from your Retell account or create a new one"
+                : "Import existing agents or create a new one"
             }
             actionLabel={search ? undefined : "Import Agents"}
             onAction={search ? undefined : () => setShowImport(true)}
