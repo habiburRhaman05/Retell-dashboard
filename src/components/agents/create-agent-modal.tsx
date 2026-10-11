@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/layout/toast";
 import { useCreateAgentFromTemplate } from "@/hooks/use-agents";
+import { useLocationName } from "@/hooks/use-location-name";
+import { withLocationName } from "@/lib/naming";
 import {
   AGENT_TEMPLATES,
   TEMPLATE_CATEGORIES,
@@ -40,6 +42,7 @@ export function CreateAgentModal({
   const router = useRouter();
   const { toast } = useToast();
   const createAgent = useCreateAgentFromTemplate(locationId);
+  const { data: locationName } = useLocationName(locationId);
 
   const [channel, setChannel] = useState<Channel>("voice");
   const [type, setType] = useState<AgentType>("single");
@@ -279,6 +282,11 @@ export function CreateAgentModal({
                   }}
                   onKeyDown={(e) => e.key === "Enter" && submit()}
                 />
+                {name.trim() && locationName && (
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    Saved as <span className="font-medium text-gray-700">{withLocationName(name, locationName).full}</span>
+                  </p>
+                )}
               </div>
               <div>
                 <label htmlFor="business-name" className="text-[12px] text-gray-600 mb-1 block">
@@ -287,7 +295,7 @@ export function CreateAgentModal({
                 <Input
                   id="business-name"
                   value={businessName}
-                  placeholder="Used in the greeting and prompt"
+                  placeholder={locationName ? `Used in the greeting and prompt (default: ${locationName})` : "Used in the greeting and prompt"}
                   disabled={busy}
                   onChange={(e) => setBusinessName(e.target.value)}
                 />

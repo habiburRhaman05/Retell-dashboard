@@ -22,6 +22,9 @@ import { useRetellStatus } from "@/hooks/use-retell-status";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { useLocationName, useSaveLocationName } from "@/hooks/use-location-name";
+import { withLocationName } from "@/lib/naming";
 
 function SectionCard({
   title,
@@ -52,6 +55,11 @@ export default function AccountSettingsPage() {
   const { locationId } = useLocation();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+  const { data: savedName, isLoading: nameLoading } = useLocationName(locationId);
+  const saveName = useSaveLocationName(locationId);
+  const [draftName, setDraftName] = useState<string | null>(null);
+  const nameValue = draftName ?? savedName ?? "";
+  const nameDirty = draftName !== null && draftName.trim() !== (savedName ?? "");
 
   const status = useRetellStatus();
   const agents = useAgents(locationId);
@@ -118,6 +126,43 @@ export default function AccountSettingsPage() {
           </code>
           <Button variant="secondary" icon={copied ? Check : Copy} onClick={copyId}>
             {copied ? "Copied" : "Copy"}
+          </Button>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="Account name"
+        description="New agents and knowledge bases are saved as {name} - {account name}."
+      >
+        <div className="flex items-start gap-2">
+          <div className="flex-1">
+            <Input
+              value={nameValue}
+              disabled={nameLoading || saveName.isPending}
+              maxLength={100}
+              placeholder="e.g. Acme Dental"
+              onChange={(e) => setDraftName(e.target.value)}
+            />
+            {nameValue.trim() && (
+              <p className="text-[12px] text-gray-500 mt-1.5">
+                Example: <span className="font-medium text-gray-700">{withLocationName("Front desk", nameValue)?.full}</span>
+              </p>
+            )}
+          </div>
+          <Button
+            loading={saveName.isPending}
+            disabled={!nameDirty || saveName.isPending}
+            onClick={async () => {
+              try {
+                await saveName.mutateAsync((draftName ?? "").trim());
+                setDraftName(null);
+                toast("Account name saved", "success");
+              } catch (err) {
+                toast(err instanceof Error ? err.message : "Could not save the name", "error");
+              }
+            }}
+          >
+            Save
           </Button>
         </div>
       </SectionCard>

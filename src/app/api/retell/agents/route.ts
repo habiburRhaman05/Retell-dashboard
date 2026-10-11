@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
+import { getLocationName } from "@/lib/location-name";
+import { withLocationName } from "@/lib/naming";
 
 export async function GET(request: NextRequest) {
   const locationId = request.nextUrl.searchParams.get("locationId");
@@ -60,6 +62,10 @@ export async function POST(request: NextRequest) {
         { error: "locationId is required" },
         { status: 400 }
       );
+    }
+
+    if (typeof agentData.agent_name === "string" && agentData.agent_name.trim()) {
+      agentData.agent_name = withLocationName(agentData.agent_name, await getLocationName(locationId)).full;
     }
 
     const tags = [`loc:${locationId}`];

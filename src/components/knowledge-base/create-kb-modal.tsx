@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocationName } from "@/hooks/use-location-name";
+import { withLocationName } from "@/lib/naming";
 import { useRef, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { useCreateKnowledgeBase } from "@/hooks/use-knowledge-bases";
@@ -30,6 +32,7 @@ export function CreateKnowledgeBaseModal({
   const [sourceError, setSourceError] = useState<string | null>(null);
   const sourcePanelRef = useRef<SourceInputPanelHandle>(null);
   const createKb = useCreateKnowledgeBase(locationId);
+  const { data: locationName } = useLocationName(locationId);
   const { toast } = useToast();
 
   const totalSources = sources.files.length + sources.texts.length + sources.urls.length;
@@ -114,6 +117,15 @@ export function CreateKnowledgeBaseModal({
               }`}
             />
             {nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
+            {!nameError && name.trim() && locationName && (() => {
+              const preview = withLocationName(name, locationName, 39);
+              return (
+                <p className="text-xs text-gray-500 mt-1">
+                  Saved as <span className="font-medium text-gray-700">{preview.full}</span>
+                  {preview.shortened && " (shortened to fit the 39 character limit)"}
+                </p>
+              );
+            })()}
           </div>
 
           <div className="mb-2">

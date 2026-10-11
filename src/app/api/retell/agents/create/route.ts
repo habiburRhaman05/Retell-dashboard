@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
 import { buildFlowPayload, fillTemplate, getTemplate } from "@/lib/agent-templates";
+import { getLocationName } from "@/lib/location-name";
+import { withLocationName } from "@/lib/naming";
 
 interface CreateBody {
   locationId?: string;
@@ -42,7 +44,6 @@ export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => ({}))) as CreateBody;
     const { locationId, type = "single", channel = "voice" } = body;
     const name = body.name?.trim();
-    const business = body.businessName?.trim() || "";
 
     if (!locationId) {
       return NextResponse.json({ error: "locationId is required" }, { status: 400 });
@@ -59,6 +60,12 @@ export async function POST(request: NextRequest) {
     if (type !== "single" && type !== "flow") {
       return NextResponse.json({ error: "Invalid agent type" }, { status: 400 });
     }
+
+    // "{name} - {location name}" for the saved agent. Prompts keep the plain
+    // name, and the business name falls back to the location's name.
+    const locationName = await getLocationName(locationId);
+    const agentName = withLocationName(name, locationName).full;
+    const business = body.businessName?.trim() || locationName || "";
 
     const template = body.templateId ? getTemplate(body.templateId) : undefined;
     if (body.templateId && !template) {
@@ -111,12 +118,12 @@ export async function POST(request: NextRequest) {
     const agent =
       channel === "text"
         ? await retell.createChatAgentRaw({
-            agent_name: name,
+            agent_name: agentName,
             response_engine: responseEngine,
             language: body.language ?? "en-US",
           })
         : await retell.createAgentRaw({
-            agent_name: name,
+            agent_name: agentName,
             response_engine: responseEngine,
             voice_id: body.voiceId,
             language: body.language ?? "en-US",

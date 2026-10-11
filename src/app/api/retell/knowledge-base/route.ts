@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
+import { getLocationName } from "@/lib/location-name";
+import { withLocationName } from "@/lib/naming";
 
 export async function GET(request: NextRequest) {
   const locationId = request.nextUrl.searchParams.get("locationId");
@@ -88,6 +90,12 @@ export async function POST(request: NextRequest) {
       if (key === "locationId") continue;
       forward.append(key, value);
     }
+
+    // "{name} - {location name}", kept under Retell's 40 character limit.
+    forward.set(
+      "knowledge_base_name",
+      withLocationName(name, await getLocationName(locationId), 39).full
+    );
 
     const kb = await retell.createKnowledgeBase(forward);
 
