@@ -375,7 +375,6 @@ export default function AgentDetailPage() {
         value={agent.timezone ?? ""}
         options={timezoneOptions}
         searchable
-        isSaving={updateAgentMut.isPending}
         onSave={(v) => handleUpdateAgent({ timezone: v || null })}
       />
     </div>
@@ -478,7 +477,6 @@ export default function AgentDetailPage() {
                   value={flow.model_choice?.model ?? ""}
                   options={modelOptions}
                   searchable
-                  isSaving={updateFlowMut.isPending}
                   onSave={(v) =>
                     updateFlowMut
                       .mutateAsync({ model_choice: { ...flow.model_choice, model: v } })
@@ -497,7 +495,6 @@ export default function AgentDetailPage() {
                 value={llm.s2s_model ? `s2s:${llm.s2s_model}` : llm.model ?? ""}
                 options={modelOptions}
                 searchable
-                isSaving={updateLlmMut.isPending}
                 onSave={handleModelChange}
               />
             ) : (
@@ -506,13 +503,11 @@ export default function AgentDetailPage() {
             {!isChat && (
               <VoiceField
                 value={agent.voice_id}
-                isSaving={updateAgentMut.isPending}
                 onSave={(v) => handleUpdateAgent({ voice_id: v })}
               />
             )}
             <LanguageField
               value={agent.language}
-              isSaving={updateAgentMut.isPending}
               onSave={(v) => handleUpdateAgent({ language: v })}
             />
           </div>

@@ -17,17 +17,17 @@ export function InlineSelect({
   value,
   options,
   searchable = false,
-  isSaving = false,
   onSave,
 }: {
   icon?: React.ComponentType<{ className?: string }>;
   value: string;
   options: readonly InlineSelectOption[];
   searchable?: boolean;
-  isSaving?: boolean;
-  onSave: (value: string) => void;
+  onSave: (value: string) => void | Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
+  // Only the field being changed shows a spinner, not every field on the page.
+  const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [wasOpen, setWasOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
@@ -113,8 +113,15 @@ export function InlineSelect({
   }, [filtered]);
 
   const handleSelect = (v: string) => {
-    onSave(v);
     setOpen(false);
+    const result = onSave(v);
+    if (result && typeof (result as Promise<unknown>).then === "function") {
+      setIsSaving(true);
+      (result as Promise<unknown>).then(
+        () => setIsSaving(false),
+        () => setIsSaving(false)
+      );
+    }
   };
 
   return (

@@ -18,13 +18,13 @@ const triggerClass =
 export function VoiceField({
   value,
   onSave,
-  isSaving,
 }: {
   value: string;
   onSave: (voiceId: string) => void | boolean | Promise<void | boolean>;
-  isSaving?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // Spinner only while this field's own change is being saved.
+  const [isSaving, setIsSaving] = useState(false);
   const { data: voices } = useVoices();
   const voice = voices?.find((v) => v.voice_id === value);
 
@@ -53,8 +53,13 @@ export function VoiceField({
           isSaving={isSaving}
           onClose={() => setOpen(false)}
           onSave={async (id) => {
-            const ok = id !== value ? await onSave(id) : true;
-            if (ok !== false) setOpen(false);
+            setIsSaving(true);
+            try {
+              const ok = id !== value ? await onSave(id) : true;
+              if (ok !== false) setOpen(false);
+            } finally {
+              setIsSaving(false);
+            }
           }}
         />
       )}
@@ -65,13 +70,12 @@ export function VoiceField({
 export function LanguageField({
   value,
   onSave,
-  isSaving,
 }: {
   value: string | string[] | null | undefined;
   onSave: (value: string | string[]) => void | boolean | Promise<void | boolean>;
-  isSaving?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const codes = normalizeLanguage(value);
 
   return (
@@ -99,8 +103,13 @@ export function LanguageField({
           onClose={() => setOpen(false)}
           onSave={async (v) => {
             const same = JSON.stringify(normalizeLanguage(v)) === JSON.stringify(codes);
-            const ok = !same ? await onSave(v) : true;
-            if (ok !== false) setOpen(false);
+            setIsSaving(true);
+            try {
+              const ok = !same ? await onSave(v) : true;
+              if (ok !== false) setOpen(false);
+            } finally {
+              setIsSaving(false);
+            }
           }}
         />
       )}

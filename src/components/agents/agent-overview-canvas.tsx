@@ -586,8 +586,7 @@ function Inner({
                 value={analysisModel}
                 options={LLM_MODEL_OPTIONS.map((o) => ({ ...o, icon: modelIcon(o.value) }))}
                 searchable
-                isSaving={isSaving}
-                onSave={(v) => void onUpdateAgent({ post_call_analysis_model: v })}
+                onSave={(v) => onUpdateAgent({ post_call_analysis_model: v })}
               />
             </div>
             <PostCallAnalysisEditor
