@@ -1,4 +1,5 @@
 import type { FlowEdgeData, FlowNodeData } from "@/hooks/use-agent-flow";
+import { phoneError } from "@/lib/validation";
 
 /** Edge fields that hold a single transition. `edges` is the repeatable list. */
 export const SINGLE_EDGE_FIELDS = [
@@ -279,8 +280,9 @@ export function validateFlow(nodes: FlowNodeData[], startId: string | null | und
     }
     if (n.type === "transfer_call") {
       const dest = n.transfer_destination as { type?: string; number?: string } | undefined;
-      if (dest?.type === "predefined" && !dest.number?.trim()) {
-        problems.push(`"${title}": enter a phone number to transfer to.`);
+      if (dest?.type === "predefined") {
+        const msg = phoneError(dest.number ?? "", { required: true });
+        if (msg) problems.push(`"${title}": ${msg.charAt(0).toLowerCase()}${msg.slice(1)}.`);
       }
     }
   }

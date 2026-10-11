@@ -39,6 +39,7 @@ import { PostCallAnalysisEditor } from "./post-call-analysis-editor";
 import { SessionToolsEditor, toolMeta } from "./session-tools-editor";
 import { SliderSetting, TagListSetting, TextSetting, ToggleSetting } from "./field-controls";
 import { LLM_MODEL_OPTIONS } from "@/lib/constants";
+import { urlError } from "@/lib/validation";
 import type { PostCallAnalysisItem, RetellAgent, RetellLlm, SessionTool } from "@/types/retell";
 
 type PanelKey = "agent" | "pre" | "post" | "extraction" | "memory" | "kb" | "webhook";
@@ -498,7 +499,8 @@ function Inner({ agent, llm, isSaving, onUpdateAgent, kbPanel, kbCount, onEditPr
               label="Webhook URL"
               value={agent.webhook_url || ""}
               placeholder="https://your-server.com/webhook"
-              onSave={(v) => void onUpdateAgent({ webhook_url: v || null })}
+              validate={(v) => urlError(v, { required: false })}
+              onSave={(v) => void onUpdateAgent({ webhook_url: v.trim() || null })}
             />
             <TagListSetting
               label="Events"

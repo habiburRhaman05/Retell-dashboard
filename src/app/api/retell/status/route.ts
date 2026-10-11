@@ -16,7 +16,7 @@ export async function GET() {
     return NextResponse.json({ connected: true, latencyMs: Date.now() - started });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not reach Retell";
-    const unauthorized = /\b401\b/.test(message);
+    const unauthorized = error instanceof retell.RetellApiError && error.status === 401;
     return NextResponse.json({
       connected: false,
       error: unauthorized ? "Retell rejected the API key (401). Check RETELL_API_KEY." : message,

@@ -45,6 +45,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { InlineSelect } from "./inline-select";
 import { modelIcon } from "./model-icons";
 import { LLM_MODEL_OPTIONS } from "@/lib/constants";
+import { phoneError } from "@/lib/validation";
 import {
   PALETTE,
   addTransition,
@@ -813,6 +814,9 @@ function NodePanel({
       {node.type === "transfer_call" && (
         <Field label="Transfer to" hint="Phone number in E.164 format, e.g. +14155550123">
           <Input
+            type="tel"
+            inputMode="tel"
+            error={dest?.number ? phoneError(dest.number) ?? undefined : undefined}
             value={dest?.number ?? ""}
             placeholder="+14155550123"
             onChange={(e) => {

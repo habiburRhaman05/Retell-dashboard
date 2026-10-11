@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { SessionTool } from "@/types/retell";
+import { toolNameError, urlError, TOOL_NAME_RE } from "@/lib/validation";
 
 type ToolKind = SessionTool["type"];
 
@@ -21,7 +22,6 @@ export function toolMeta(type: string) {
   return TOOL_META[type] ?? { label: type.replace(/_/g, " "), icon: Wrench };
 }
 
-const NAME_RE = /^[a-zA-Z0-9_-]{1,64}$/;
 const OPERATORS = ["==", "!=", ">", ">=", "<", "<=", "contains", "not_contains", "exists", "not_exist"] as const;
 
 interface Equation {
@@ -167,15 +167,13 @@ function ToolForm({
 
   const build = (): SessionTool | null => {
     const problems: string[] = [];
-    if (!NAME_RE.test(name)) {
-      problems.push("The name can use letters, numbers, underscores and dashes (up to 64 characters).");
-    } else if (others.some((t) => t.name === name)) {
-      problems.push("Another function already uses this name.");
-    }
+    const nameProblem = toolNameError(name, others.map((t) => t.name));
+    if (nameProblem) problems.push(nameProblem + ".");
     const next: SessionTool = { ...tool, name, description: description.trim() || undefined };
 
     if (tool.type === "custom") {
-      if (!/^https?:\/\/\S+$/i.test(url.trim())) problems.push("Enter a full URL starting with http:// or https://.");
+      const urlProblem = urlError(url);
+      if (urlProblem) problems.push(urlProblem + ".");
       next.url = url.trim();
       next.method = method as SessionTool["method"];
       next.headers = fromPairs(headers);
@@ -248,7 +246,7 @@ function ToolForm({
       const parsed = JSON.parse(jsonText) as SessionTool;
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Expected a JSON object");
       if (!parsed.type || !parsed.name) throw new Error("The tool needs a type and a name");
-      if (!NAME_RE.test(parsed.name)) throw new Error("Invalid name");
+      if (!TOOL_NAME_RE.test(parsed.name)) throw new Error("Invalid name");
       if (others.some((t) => t.name === parsed.name)) throw new Error("Another function already uses this name");
       setJsonError(null);
       await onSubmit(parsed);

@@ -307,6 +307,7 @@ export function TextSetting({
   value,
   placeholder,
   multiline,
+  validate,
   onSave,
 }: {
   label: string;
@@ -314,22 +315,36 @@ export function TextSetting({
   value: string;
   placeholder?: string;
   multiline?: boolean;
+  /** Return a message to block the save and show it under the field. */
+  validate?: (v: string) => string | null;
   onSave: (v: string) => void;
 }) {
   const [local, setLocal] = useState(value);
   const [dirty, setDirty] = useState(false);
   const [syncedValue, setSyncedValue] = useState(value);
+  const [error, setError] = useState<string | null>(null);
 
   if (value !== syncedValue) {
     setSyncedValue(value);
     setLocal(value);
     setDirty(false);
+    setError(null);
   }
 
   const commit = () => {
-    if (dirty) onSave(local);
+    if (!dirty) return;
+    const message = validate ? validate(local) : null;
+    if (message) {
+      setError(message);
+      return;
+    }
+    setError(null);
+    onSave(local);
     setDirty(false);
   };
+  const fieldError = error
+    ? "border-red-400 bg-red-50/40 focus:ring-red-500/20 focus:border-red-500"
+    : "";
 
   return (
     <div className="px-5 py-3.5 border-t border-gray-50 first:border-0">
@@ -345,9 +360,10 @@ export function TextSetting({
           onChange={(e) => {
             setLocal(e.target.value);
             setDirty(true);
+            setError(null);
           }}
           onBlur={commit}
-          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-[13px] text-gray-700 bg-white placeholder:text-gray-400 hover:border-gray-300 transition-all duration-150 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 resize-none"
+          className={cn("w-full px-3 py-2 rounded-lg border border-gray-200 text-[13px] text-gray-700 bg-white placeholder:text-gray-400 hover:border-gray-300 transition-all duration-150 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 resize-none", fieldError)}
         />
       ) : (
         <input
@@ -357,11 +373,17 @@ export function TextSetting({
           onChange={(e) => {
             setLocal(e.target.value);
             setDirty(true);
+            setError(null);
           }}
           onBlur={commit}
           onKeyDown={(e) => e.key === "Enter" && commit()}
-          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-[13px] text-gray-700 bg-white placeholder:text-gray-400 hover:border-gray-300 transition-all duration-150 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400"
+          className={cn("w-full px-3 py-2 rounded-lg border border-gray-200 text-[13px] text-gray-700 bg-white placeholder:text-gray-400 hover:border-gray-300 transition-all duration-150 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400", fieldError)}
         />
+      )}
+      {error && (
+        <p role="alert" className="text-[11px] text-red-600 mt-1.5">
+          {error}
+        </p>
       )}
     </div>
   );

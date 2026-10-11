@@ -13,6 +13,24 @@ import type {
 
 const RETELL_BASE_URL = "https://api.retellai.com";
 
+/** Carries Retell's own message (not the raw JSON body) so it can be shown to people as is. */
+export class RetellApiError extends Error {
+  status: number;
+  constructor(status: number, body: string) {
+    let message = body;
+    try {
+      const parsed = JSON.parse(body);
+      if (typeof parsed?.message === "string") message = parsed.message;
+      else if (typeof parsed?.error === "string") message = parsed.error;
+    } catch {
+      // body was not JSON; keep it as is
+    }
+    super(message || `Retell request failed (${status})`);
+    this.name = "RetellApiError";
+    this.status = status;
+  }
+}
+
 function getApiKey(): string {
   const key = process.env.RETELL_API_KEY;
   if (!key) throw new Error("RETELL_API_KEY environment variable is not set");
@@ -41,7 +59,7 @@ async function retellFetch<T>(
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Retell API error ${res.status}: ${body}`);
+    throw new RetellApiError(res.status, body);
   }
 
   if (res.status === 204) return undefined as T;

@@ -1,5 +1,6 @@
 "use client";
 
+import { isHttpUrl } from "@/lib/validation";
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { KnowledgeBaseTextInput } from "@/types/retell";
@@ -88,9 +89,9 @@ export const SourceInputPanel = forwardRef<SourceInputPanelHandle, {
     const trimmed = urlInput.trim();
     if (!trimmed) return;
     try {
-      new URL(trimmed);
+      if (!isHttpUrl(trimmed)) throw new Error("not http(s)");
     } catch {
-      setUrlError("Enter a valid URL, e.g. https://example.com");
+      setUrlError("Enter a full URL starting with http:// or https://, e.g. https://example.com");
       return;
     }
     setUrlError(null);
@@ -118,11 +119,11 @@ export const SourceInputPanel = forwardRef<SourceInputPanelHandle, {
       const trimmedUrl = urlInput.trim();
       if (trimmedUrl) {
         try {
-          new URL(trimmedUrl);
+          if (!isHttpUrl(trimmedUrl)) throw new Error("not http(s)");
           next = { ...next, urls: [...next.urls, trimmedUrl] };
           setUrlInput("");
         } catch {
-          setUrlError("Enter a valid URL, e.g. https://example.com");
+          setUrlError("Enter a full URL starting with http:// or https://, e.g. https://example.com");
         }
       }
 

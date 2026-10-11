@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { LLM_MODEL_OPTIONS, S2S_MODEL_OPTIONS } from "@/lib/constants";
 import { modelIcon } from "@/components/agents/model-icons";
 import { getTimezoneOptions } from "@/lib/timezones";
+import { urlError } from "@/lib/validation";
 import { VoiceField, LanguageField } from "@/components/agents/voice-language-fields";
 import {
   ArrowLeft,
@@ -1168,7 +1169,8 @@ export default function AgentDetailPage() {
                 label="Webhook URL"
                 value={agent.webhook_url || ""}
                 placeholder="https://your-server.com/webhook"
-                onSave={(v) => handleUpdateAgent({ webhook_url: v || null })}
+                validate={(v) => urlError(v, { required: false })}
+                onSave={(v) => handleUpdateAgent({ webhook_url: v.trim() || null })}
               />
               <TagListSetting
                 label="Events"
