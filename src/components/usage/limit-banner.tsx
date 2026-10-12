@@ -31,7 +31,12 @@ export function LimitBanner() {
       warnings.push(`You have used ${e.used} of ${e.limit} ${label}.`);
     }
     if (e.status === "blocked" && e.limit !== null) {
-      blocks.push(`You have used ${e.used} of ${e.limit} ${label}. Contact support to raise your limit.`);
+      if (e.reason && e.reason !== "LIMIT_REACHED") {
+        // Disabled from the admin Features tab: deleting usage will not lift it.
+        blocks.push(`${label} are disabled (${e.reason}). Contact support to enable them.`);
+      } else {
+        blocks.push(`You have used ${e.used} of ${e.limit} ${label}. Contact support to raise your limit.`);
+      }
     }
   }
 

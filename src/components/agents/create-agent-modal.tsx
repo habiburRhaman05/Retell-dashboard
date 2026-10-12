@@ -30,7 +30,7 @@ import {
   type TemplateCategory,
 } from "@/lib/agent-templates";
 import { VoiceField, LanguageField } from "./voice-language-fields";
-import { useEntitlements, isBlocked, getBlockReason } from "@/hooks/use-entitlements";
+import { useEntitlements, isBlocked, isLimitBlocked, getBlockReason } from "@/hooks/use-entitlements";
 
 type AgentType = "single" | "flow";
 type Channel = "voice" | "text";
@@ -50,6 +50,7 @@ export function CreateAgentModal({
 
   const { data: entitlements } = useEntitlements();
   const agentBlocked = isBlocked(entitlements, "agents.create");
+  const limitBlocked = isLimitBlocked(entitlements, "agents.create");
   const blockReason = getBlockReason(entitlements, "agents.create");
 
   const [channel, setChannel] = useState<Channel>("voice");
@@ -350,7 +351,13 @@ export function CreateAgentModal({
               Cancel
             </Button>
             <Button loading={busy} disabled={busy || agentBlocked} onClick={submit}>
-              {busy ? "Creating..." : agentBlocked ? "Limit reached" : "Create agent"}
+              {busy
+                ? "Creating..."
+                : agentBlocked
+                  ? limitBlocked
+                    ? "Limit reached"
+                    : "Unavailable"
+                  : "Create agent"}
             </Button>
           </div>
         </div>

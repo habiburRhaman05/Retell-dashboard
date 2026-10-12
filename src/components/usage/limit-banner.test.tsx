@@ -60,6 +60,19 @@ describe("LimitBanner", () => {
     expect(banner.textContent).toContain("Contact support");
   });
 
+  it("reports the real cause when blocked by an admin feature toggle", async () => {
+    // 1 of 2 used: deleting agents will not lift this block, so the banner
+    // must not claim a limit was hit.
+    mockFetchEntitlements({
+      "agents.create": { enabled: false, used: 1, limit: 2, status: "blocked", reason: "test" },
+    });
+    render(<LimitBanner />);
+    await waitFor(() => {
+      expect(screen.getByText(/are disabled \(test\)/)).toBeDefined();
+    });
+    expect(screen.queryByText(/You have used 1 of 2/)).toBeNull();
+  });
+
   it("renders nothing on fetch error", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network error"));
     const { container } = render(<LimitBanner />);

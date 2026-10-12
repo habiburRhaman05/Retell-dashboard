@@ -33,12 +33,26 @@ export function isBlocked(entitlements: Entitlements | null, featureKey: string)
   return e ? e.status === "blocked" : false;
 }
 
+// A block counts as a limit block only when the server said so. A feature
+// disabled from the admin Features tab must not be reported as "used X of Y",
+// because deleting things will not lift that block.
+export function isLimitBlocked(entitlements: Entitlements | null, featureKey: string): boolean {
+  if (!entitlements) return false;
+  const e = entitlements[featureKey];
+  if (!e || e.status !== "blocked") return false;
+  if (e.reason) return e.reason === "LIMIT_REACHED";
+  return e.limit !== null && e.used >= e.limit;
+}
+
 export function getBlockReason(entitlements: Entitlements | null, featureKey: string): string | null {
   if (!entitlements) return null;
   const e = entitlements[featureKey];
   if (!e || e.status !== "blocked") return null;
-  if (e.limit !== null) {
+  if (isLimitBlocked(entitlements, featureKey) && e.limit !== null) {
     return `You have used ${e.used} of ${e.limit}. Contact support to raise your limit.`;
   }
-  return e.reason ?? "This feature is currently unavailable.";
+  if (e.reason) {
+    return `This feature is disabled (${e.reason}). Contact support to enable it.`;
+  }
+  return "This feature is currently unavailable.";
 }
