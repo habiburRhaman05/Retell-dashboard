@@ -206,10 +206,29 @@ export function VoicePickerModal({
     [voices, activeProvider]
   );
 
-  const accents = useMemo(
-    () => [...new Set(inScope.map((v) => v.accent).filter(Boolean) as string[])].sort(),
-    [inScope]
-  );
+  // Every accent and gender Retell has, not only the ones in this tab. Each
+  // shows how many voices it has here; ones with none in this tab are greyed out.
+  const accentOptions = useMemo(() => {
+    const total = new Map<string, number>();
+    for (const v of voices ?? []) if (v.accent) total.set(v.accent, (total.get(v.accent) ?? 0) + 1);
+    const here = new Map<string, number>();
+    for (const v of inScope) if (v.accent) here.set(v.accent, (here.get(v.accent) ?? 0) + 1);
+    return [...total.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([name]) => ({ name, here: here.get(name) ?? 0 }));
+  }, [voices, inScope]);
+
+  const genderOptions = useMemo(() => {
+    const total = new Set<string>();
+    for (const v of voices ?? []) if (v.gender) total.add(v.gender);
+    const here = new Map<string, number>();
+    for (const v of inScope) if (v.gender) here.set(v.gender, (here.get(v.gender) ?? 0) + 1);
+    return [...total]
+      .sort()
+      .map((name) => ({ name, here: here.get(name) ?? 0 }));
+  }, [voices, inScope]);
+
+  const titleCase = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -230,6 +249,49 @@ export function VoicePickerModal({
     [inScope, search, gender, accent]
   );
 
+  const describeMediaError = (code: number | undefined) =>
+    code === 2
+      ? "Network problem while loading the sample."
+      : code === 3
+      ? "The sample could not be decoded."
+      : code === 4
+      ? "The browser could not use the sample link."
+      : "";
+
+  // Plays `src`. If the sample's own link fails (blocked, wrong type, offline
+  // host), it is tried once more through our own server before giving up.
+  const startAudio = (v: RetellVoice, src: string, viaServer: boolean) => {
+    const audio = new Audio(src);
+    audioRef.current = audio;
+    setPlayingId(v.voice_id);
+
+    const fail = (reason: string, retry: boolean) => {
+      if (audioRef.current !== audio) return;
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      if (retry && !viaServer) {
+        startAudio(v, `/api/retell/voices/preview?voiceId=${encodeURIComponent(v.voice_id)}`, true);
+        return;
+      }
+      audioRef.current = null;
+      setPlayingId((cur) => (cur === v.voice_id ? null : cur));
+      setPreviewError(`Could not play the preview for ${v.voice_name}. ${reason}`.trim());
+    };
+
+    audio.onended = () => setPlayingId((cur) => (cur === v.voice_id ? null : cur));
+    audio.onerror = () => fail(describeMediaError(audio.error?.code), true);
+    audio.play().catch((err: unknown) => {
+      // An interrupted play (user clicked another voice) is not an error.
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (err instanceof DOMException && err.name === "NotAllowedError") {
+        fail("Your browser blocked playback. Click the play button again.", false);
+        return;
+      }
+      fail(err instanceof Error ? err.message : "", true);
+    });
+  };
+
   const togglePlay = (v: RetellVoice) => {
     setPreviewError(null);
     if (playingId === v.voice_id) {
@@ -241,22 +303,7 @@ export function VoicePickerModal({
       return;
     }
     stopAudio();
-    const audio = new Audio(v.preview_audio_url);
-    audioRef.current = audio;
-    setPlayingId(v.voice_id);
-    audio.onended = () => setPlayingId((cur) => (cur === v.voice_id ? null : cur));
-    audio.onerror = () => {
-      if (audioRef.current !== audio) return;
-      setPlayingId((cur) => (cur === v.voice_id ? null : cur));
-      setPreviewError(`Could not play the preview for ${v.voice_name}`);
-    };
-    audio.play().catch((err: unknown) => {
-      // An interrupted play (user clicked another voice) is not an error.
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      if (audioRef.current !== audio) return;
-      setPlayingId((cur) => (cur === v.voice_id ? null : cur));
-      setPreviewError(`Could not play the preview for ${v.voice_name}`);
-    });
+    startAudio(v, v.preview_audio_url, false);
   };
 
   const tabClass = (active: boolean) =>
@@ -364,8 +411,11 @@ export function VoicePickerModal({
                   className={selectClass}
                 >
                   <option value="">Gender</option>
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
+                  {genderOptions.map((g) => (
+                    <option key={g.name} value={g.name} disabled={g.here === 0 && g.name !== gender}>
+                      {titleCase(g.name)} ({g.here})
+                    </option>
+                  ))}
                 </select>
                 <select
                   aria-label="Accent"
@@ -374,9 +424,9 @@ export function VoicePickerModal({
                   className={selectClass}
                 >
                   <option value="">Accent</option>
-                  {accents.map((a) => (
-                    <option key={a} value={a}>
-                      {a}
+                  {accentOptions.map((a) => (
+                    <option key={a.name} value={a.name} disabled={a.here === 0 && a.name !== accent}>
+                      {a.name} ({a.here})
                     </option>
                   ))}
                 </select>
@@ -428,7 +478,8 @@ export function VoicePickerModal({
               ) : (
                 <div className="py-16 text-center">
                   <Volume2 className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">No voices match your filters</p>
+                  <p className="text-sm text-gray-600">No voices match your filters in this tab</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Try another tab, or clear the filters.</p>
                   <button
                     className="text-[12px] text-brand-600 hover:underline mt-1"
                     onClick={() => {

@@ -20,14 +20,12 @@ import { PronunciationEditor } from "@/components/agents/pronunciation-editor";
 import { PostCallAnalysisEditor } from "@/components/agents/post-call-analysis-editor";
 import { FunctionsEditor } from "@/components/agents/functions-editor";
 import { KnowledgeBaseSelector } from "@/components/agents/knowledge-base-selector";
-import { TestCallPanel } from "@/components/agents/test-call-panel";
 import { TestChatPanel } from "@/components/agents/test-chat-panel";
 import { VersionHistoryPanel } from "@/components/agents/version-history-panel";
 import { InlineSelect } from "@/components/agents/inline-select";
 import { WorkflowEditor, type WorkflowEditorHandle } from "@/components/agents/workflow-editor";
 import { SaveButton } from "@/components/agents/save-button";
 import { EditableTitle } from "@/components/agents/editable-title";
-import { AgentOverviewCanvas } from "@/components/agents/agent-overview-canvas";
 import { useAgentFlow, useUpdateAgentFlow } from "@/hooks/use-agent-flow";
 import { useAgents } from "@/hooks/use-agents";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +47,6 @@ import {
   Mic,
   Settings2,
   Loader2,
-  PhoneCall,
   History,
   Radio,
   Languages,
@@ -72,7 +69,6 @@ type TabKey = "workflow" | "prompt" | "voice" | "call" | "chat" | "tools" | "ana
 
 const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "prompt", label: "Prompt", icon: FileText },
-  { key: "workflow", label: "Workflow", icon: Workflow },
   { key: "voice", label: "Voice & Speech", icon: Mic },
   { key: "call", label: "Call", icon: Phone },
   { key: "tools", label: "Functions & Knowledge", icon: Zap },
@@ -163,7 +159,6 @@ export default function AgentDetailPage() {
   const [startSpeaker, setStartSpeaker] = useState<"agent" | "user">("agent");
   // "dynamic" = begin_message is null and the model writes the greeting itself.
   const [messageMode, setMessageMode] = useState<"custom" | "dynamic">("custom");
-  const [showTestCall, setShowTestCall] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const [showTestChat, setShowTestChat] = useState(false);
   const [tab, setTab] = useState<TabKey>("prompt");
@@ -441,16 +436,6 @@ export default function AgentDetailPage() {
 
             <div className="flex items-center gap-2 shrink-0">
               <SaveButton dirty={dirty} saving={saving} onClick={saveCurrent} />
-              {!isChat && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  icon={PhoneCall}
-                  onClick={() => setShowTestCall(true)}
-                >
-                  Test Call
-                </Button>
-              )}
               <Button
                 size="sm"
                 variant="secondary"
@@ -599,22 +584,6 @@ export default function AgentDetailPage() {
                   }}
                 />
               )}
-            </div>
-          )}
-
-          {currentTab === "workflow" && !isFlow && !isChat && (
-            <div className="animate-fade-in">
-              <AgentOverviewCanvas
-                agent={agent}
-                llm={llm}
-                isSaving={updateAgentMut.isPending}
-                onUpdateAgent={handleUpdateAgent}
-                kbPanel={kbSelector}
-                kbCount={(llm?.knowledge_base_ids ?? []).length}
-                onEditPrompt={() => setTab("prompt")}
-                onUpdateLlm={handleUpdateLlm}
-                llmSaving={updateLlmMut.isPending}
-              />
             </div>
           )}
 
@@ -1266,15 +1235,6 @@ export default function AgentDetailPage() {
           )}
         </div>
       </div>
-
-      {showTestCall && (
-        <TestCallPanel
-          agentId={agentId}
-          agentName={agent.agent_name || ""}
-          locationId={locationId}
-          onClose={() => setShowTestCall(false)}
-        />
-      )}
 
       {showTestChat && (
         <TestChatPanel

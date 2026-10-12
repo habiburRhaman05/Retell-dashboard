@@ -34,7 +34,7 @@ const SINGLE_LABELS: Record<SingleEdgeField, string> = {
 export function conditionLabel(edge: FlowEdgeData): string {
   const c = edge.transition_condition;
   if (!c) return "Transition";
-  if (c.type === "prompt") return c.prompt || "Transition";
+  if (c.type === "prompt") return c.prompt?.trim() || "Transition";
   if (c.type === "equation") return "Equation condition";
   return "Transition";
 }
@@ -58,7 +58,7 @@ export function outgoingEdges(node: FlowNodeData): OutEdge[] {
         field,
         edge,
         removable: false,
-        label: edge.transition_condition?.prompt || SINGLE_LABELS[field],
+        label: edge.transition_condition?.prompt?.trim() || SINGLE_LABELS[field],
       });
     }
   }

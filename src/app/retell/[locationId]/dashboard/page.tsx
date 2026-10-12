@@ -316,7 +316,7 @@ export default function OverviewPage() {
                     <PhoneCall className="w-6 h-6" />
                   </span>
                   <p className="text-sm font-medium text-gray-700">No calls in the last 30 days</p>
-                  <p className="text-xs text-gray-500 mt-1">Open an agent and press Test Call to try one.</p>
+                  <p className="text-xs text-gray-500 mt-1">Calls made by your agents will show up here.</p>
                 </div>
               ) : (
                 <LineAreaChart

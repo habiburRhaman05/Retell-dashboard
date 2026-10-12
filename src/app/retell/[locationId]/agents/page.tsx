@@ -227,13 +227,11 @@ export default function AgentsPage() {
   const [sortBy, setSortBy] = useState<"name" | "modified">("modified");
   const [showImport, setShowImport] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [channelFilter, setChannelFilter] = useState<"all" | "voice" | "chat">("all");
 
   const filteredAgents = useMemo(() => {
     if (!agents) return [];
     const result = agents.filter(
       (a) =>
-        (channelFilter === "all" || (channelFilter === "chat") === (a.channel === "chat")) &&
         (!search ||
         (a.agent_name || "").toLowerCase().includes(search.toLowerCase()) ||
         a.agent_id.toLowerCase().includes(search.toLowerCase()))
@@ -245,7 +243,7 @@ export default function AgentsPage() {
       return b.last_modification_timestamp - a.last_modification_timestamp;
     });
     return result;
-  }, [agents, search, sortBy, channelFilter]);
+  }, [agents, search, sortBy]);
 
   const handleDelete = async (agentId: string, agentName: string) => {
     if (
@@ -292,27 +290,6 @@ export default function AgentsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-          </div>
-
-          <div className="inline-flex p-0.5 rounded-lg bg-gray-100">
-            {([
-              { key: "all", label: "All" },
-              { key: "voice", label: "Voice" },
-              { key: "chat", label: "Text" },
-            ] as const).map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setChannelFilter(f.key)}
-                className={cn(
-                  "px-3 py-1 text-[12px] font-medium rounded-md transition-all",
-                  channelFilter === f.key
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
           </div>
 
           <div className="flex items-center gap-2 ml-auto">

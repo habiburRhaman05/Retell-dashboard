@@ -20,8 +20,9 @@ export function withLocationName(
   let shortened = false;
 
   if (maxLen !== undefined) {
-    // Keep the location part short enough that the typed name still has room.
-    const maxSuffix = Math.min(suffix.length, 22);
+    // Keep the location part short enough that the typed name still has room,
+    // and never longer than the budget minus one character for the name itself.
+    const maxSuffix = Math.max(1, Math.min(suffix.length, 22, maxLen - 1));
     if (suffix.length > maxSuffix) {
       suffix = `${suffix.slice(0, maxSuffix - 1)}…`;
       shortened = true;
