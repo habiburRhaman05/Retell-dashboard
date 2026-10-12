@@ -30,6 +30,7 @@ import {
   type TemplateCategory,
 } from "@/lib/agent-templates";
 import { VoiceField, LanguageField } from "./voice-language-fields";
+import { useEntitlements, isBlocked, getBlockReason } from "@/hooks/use-entitlements";
 
 type AgentType = "single" | "flow";
 type Channel = "voice" | "text";
@@ -46,6 +47,10 @@ export function CreateAgentModal({
   const createAgent = useCreateAgentFromTemplate(locationId);
   const { data: locationName } = useLocationName(locationId);
   const { data: existingAgents } = useAgents(locationId);
+
+  const { data: entitlements } = useEntitlements();
+  const agentBlocked = isBlocked(entitlements, "agents.create");
+  const blockReason = getBlockReason(entitlements, "agents.create");
 
   const [channel, setChannel] = useState<Channel>("voice");
   const [type, setType] = useState<AgentType>("single");
@@ -272,6 +277,11 @@ export function CreateAgentModal({
 
           {/* Right: details + preview */}
           <div className="lg:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-gray-200 bg-gray-50/60 overflow-y-auto px-5 py-5 space-y-5">
+            {agentBlocked && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {blockReason}
+              </div>
+            )}
             <div className="space-y-3">
               <p className="text-[12px] font-semibold text-gray-700">Details</p>
               <div>
@@ -339,8 +349,8 @@ export function CreateAgentModal({
             <Button variant="secondary" onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            <Button loading={busy} disabled={busy} onClick={submit}>
-              {busy ? "Creating..." : "Create agent"}
+            <Button loading={busy} disabled={busy || agentBlocked} onClick={submit}>
+              {busy ? "Creating..." : agentBlocked ? "Limit reached" : "Create agent"}
             </Button>
           </div>
         </div>

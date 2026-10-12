@@ -27,6 +27,7 @@ import { LineAreaChart } from "@/components/analytics/line-area-chart";
 import { Badge } from "@/components/ui/badge";
 import { cn, timeAgo } from "@/lib/utils";
 import { languagesLabel } from "@/lib/languages";
+import { UsageCard } from "@/components/usage/usage-card";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -398,6 +399,8 @@ export default function OverviewPage() {
 
         {/* Right column */}
         <div className="space-y-6">
+          <UsageCard />
+
           <Panel title="Quick actions">
             <div className="p-3 space-y-1">
               {quickActions.map((a) => {

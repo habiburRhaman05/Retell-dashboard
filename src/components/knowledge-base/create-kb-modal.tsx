@@ -11,6 +11,7 @@ import {
   type SourceInputValue,
   type SourceInputPanelHandle,
 } from "./source-input";
+import { useEntitlements, isBlocked, getBlockReason } from "@/hooks/use-entitlements";
 
 export function CreateKnowledgeBaseModal({
   locationId,
@@ -34,6 +35,9 @@ export function CreateKnowledgeBaseModal({
   const createKb = useCreateKnowledgeBase(locationId);
   const { data: locationName } = useLocationName(locationId);
   const { toast } = useToast();
+  const { data: entitlements } = useEntitlements();
+  const kbBlocked = isBlocked(entitlements, "knowledge_bases.create");
+  const blockReason = getBlockReason(entitlements, "knowledge_bases.create");
 
   const totalSources = sources.files.length + sources.texts.length + sources.urls.length;
 
@@ -99,6 +103,11 @@ export function CreateKnowledgeBaseModal({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+          {kbBlocked && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+              {blockReason}
+            </div>
+          )}
           <div className="mb-5">
             <label className="block text-[13px] font-medium text-gray-700 mb-1.5">
               Name <span className="text-red-400">*</span>
@@ -164,11 +173,11 @@ export function CreateKnowledgeBaseModal({
             </button>
             <button
               onClick={handleCreate}
-              disabled={createKb.isPending}
+              disabled={createKb.isPending || kbBlocked}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {createKb.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {createKb.isPending ? "Creating..." : "Create Knowledge Base"}
+              {createKb.isPending ? "Creating..." : kbBlocked ? "Limit reached" : "Create Knowledge Base"}
             </button>
           </div>
         </div>

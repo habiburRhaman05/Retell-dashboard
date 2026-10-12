@@ -7,6 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ──────────────────────────────────────────────────
+
+enum TenantStatus {
+  active
+  suspended
+
+  @@map("tenant_status")
+}
+
+enum AdminRole {
+  owner
+  support
+
+  @@map("admin_role")
+}
+
+enum MetricType {
+  AGENTS
+  KNOWLEDGE_BASES
+  CALL_MINUTES
+  CALLS
+  CONCURRENT_CALLS
+
+  @@map("metric_type")
+}
+
+enum LimitPeriod {
+  monthly
+  lifetime
+
+  @@map("limit_period")
+}
+
+enum LimitMode {
+  hard
+  soft
+
+  @@map("limit_mode")
+}
+
+// ─── Existing tables (kept as-is for backward compatibility) ─
+
 model Location {
   id             String                  @id @default(cuid())
   locationId     String                  @unique @map("location_id")
@@ -49,4 +91,194 @@ model LocationKnowledgeBase {
   @@index([locationId])
   @@index([retellKnowledgeBaseId])
   @@map("location_knowledge_bases")
+}
+
+// ─── New tables for multi-tenant SaaS ───────────────────────
+
+model Tenant {
+  id              String       @id @default(cuid())
+  crmLocationId   String       @unique @map("crm_location_id")
+  name            String
+  email           String?
+  status          TenantStatus @default(active)
+  retellWorkspace String?      @map("retell_workspace")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  limitPolicies  LimitPolicy[]
+  usageEvents    UsageEvent[]
+  usageCounters  UsageCounter[]
+  featureLocks   FeatureLock[]
+  tenantFeatures TenantFeature[]
+  accessLinks    AccessLink[]
+  auditLogs      AuditLog[]
+
+  @@map("tenants")
+}
+
+// ─── Access Links ───────────────────────────────────────────
+
+model AccessLink {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime? @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([tenantId])
+  @@map("access_links")
+}
+
+// ─── Admin Users ────────────────────────────────────────────
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  role         AdminRole @default(support)
+  passwordHash String    @map("password_hash")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("admin_users")
+}
+
+// ─── Limit Policies ────────────────────────────────────────
+
+model LimitPolicy {
+  id         String      @id @default(cuid())
+  tenantId   String      @map("tenant_id")
+  metric     MetricType
+  period     LimitPeriod @default(monthly)
+  limitValue Int         @map("limit_value")
+  warnAtPct  Int         @default(80) @map("warn_at_pct")
+  mode       LimitMode   @default(hard)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, metric])
+  @@index([tenantId])
+  @@map("limit_policies")
+}
+
+// ─── Usage Events ──────────────────────────────────────────
+
+model UsageEvent {
+  id          String   @id @default(cuid())
+  callId      String   @unique @map("call_id")
+  tenantId    String   @map("tenant_id")
+  agentId     String   @map("agent_id")
+  eventType   String   @map("event_type")
+  durationSec Int?     @map("duration_sec")
+  costCents   Int?     @map("cost_cents")
+  startedAt   DateTime @map("started_at")
+  endedAt     DateTime @map("ended_at")
+  rawPayload  Json?    @map("raw_payload")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, startedAt])
+  @@index([agentId])
+  @@map("usage_events")
+}
+
+// ─── Usage Counters ────────────────────────────────────────
+
+model UsageCounter {
+  id          String     @id @default(cuid())
+  tenantId    String     @map("tenant_id")
+  metric      MetricType
+  periodStart DateTime   @map("period_start")
+  value       Int        @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, metric, periodStart])
+  @@index([tenantId])
+  @@map("usage_counters")
+}
+
+// ─── Feature Locks ─────────────────────────────────────────
+
+model FeatureLock {
+  id         String      @id @default(cuid())
+  tenantId   String      @map("tenant_id")
+  featureKey String      @map("feature_key")
+  metric     MetricType?
+  reason     String?
+  lockedAt   DateTime    @default(now()) @map("locked_at")
+  clearedAt  DateTime?   @map("cleared_at")
+  savedData  Json?       @map("saved_data")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, featureKey])
+  @@map("feature_locks")
+}
+
+// ─── Tenant Features (admin switches) ──────────────────────
+
+model TenantFeature {
+  id         String   @id @default(cuid())
+  tenantId   String   @map("tenant_id")
+  featureKey String   @map("feature_key")
+  enabled    Boolean  @default(true)
+  reason     String?
+  changedBy  String?  @map("changed_by")
+  changedAt  DateTime @default(now()) @map("changed_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, featureKey])
+  @@index([tenantId])
+  @@map("tenant_features")
+}
+
+// ─── Audit Log ─────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorType  String   @map("actor_type")
+  actorId    String   @map("actor_id")
+  action     String
+  targetType String   @map("target_type")
+  targetId   String?  @map("target_id")
+  tenantId   String?  @map("tenant_id")
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// ─── Webhook Inbox ─────────────────────────────────────────
+
+model WebhookInbox {
+  id             String    @id @default(cuid())
+  eventType      String    @map("event_type")
+  callId         String?   @map("call_id")
+  rawBody        String    @map("raw_body")
+  signatureValid Boolean   @map("signature_valid")
+  processedAt    DateTime? @map("processed_at")
+  error          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([callId])
+  @@index([processedAt])
+  @@map("webhook_inbox")
 }

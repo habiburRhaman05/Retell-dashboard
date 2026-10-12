@@ -1,7 +1,8 @@
 import { LocationProvider } from "@/providers/location-provider";
 import { ToastProvider } from "@/components/layout/toast";
 import { TopNavbar } from "@/components/layout/top-navbar";
-import { LocationNameSync } from "@/components/layout/location-name-sync";
+import { TenantGate } from "@/components/auth/tenant-gate";
+import { LimitBanner } from "@/components/usage/limit-banner";
 
 export default async function LocationLayout({
   children,
@@ -13,14 +14,20 @@ export default async function LocationLayout({
   const { locationId } = await params;
 
   return (
-    <LocationProvider locationId={locationId}>
-      <ToastProvider>
-        <LocationNameSync />
-        <div className="h-full flex flex-col">
-          <TopNavbar />
-          <main className="flex-1 overflow-auto">{children}</main>
-        </div>
-      </ToastProvider>
-    </LocationProvider>
+    <TenantGate locationId={locationId}>
+      <LocationProvider locationId={locationId}>
+        <ToastProvider>
+          <div className="h-full flex flex-col">
+            <TopNavbar />
+            <main className="flex-1 overflow-auto">
+              <div className="px-4 lg:px-6 pt-4">
+                <LimitBanner />
+              </div>
+              {children}
+            </main>
+          </div>
+        </ToastProvider>
+      </LocationProvider>
+    </TenantGate>
   );
 }
