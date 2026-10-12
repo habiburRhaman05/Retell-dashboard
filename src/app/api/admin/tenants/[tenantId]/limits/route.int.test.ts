@@ -8,7 +8,10 @@ vi.mock("@/lib/prisma", () => ({
       upsert: vi.fn(),
       delete: vi.fn(),
     },
-    usageCounter: { findMany: vi.fn() },
+    usageCounter: { findUnique: vi.fn(), findMany: vi.fn() },
+    tenant: { findUnique: vi.fn() },
+    locationAgent: { count: vi.fn() },
+    locationKnowledgeBase: { count: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }));
@@ -24,7 +27,8 @@ import { GET, POST, DELETE } from "./route";
 const mockPolicies = vi.mocked(prisma.limitPolicy.findMany);
 const mockPolicyUpsert = vi.mocked(prisma.limitPolicy.upsert);
 const mockPolicyDelete = vi.mocked(prisma.limitPolicy.delete);
-const mockCounters = vi.mocked(prisma.usageCounter.findMany);
+const mockTenant = vi.mocked(prisma.tenant.findUnique);
+const mockAgentCount = vi.mocked(prisma.locationAgent.count);
 const mockAudit = vi.mocked(prisma.auditLog.create);
 
 function ownerSession() {
@@ -59,9 +63,9 @@ describe("GET /api/admin/tenants/[tenantId]/limits", () => {
     mockPolicies.mockResolvedValue([
       { id: "p1", metric: "AGENTS", limitValue: 10, tenantId: "t1" },
     ] as never);
-    mockCounters.mockResolvedValue([
-      { metric: "AGENTS", value: 5 },
-    ] as never);
+    // agent usage is counted from locationAgent, not from usageCounter
+    mockTenant.mockResolvedValue({ crmLocationId: "loc_1" } as never);
+    mockAgentCount.mockResolvedValue(5 as never);
     const req = new NextRequest("http://localhost/api/admin/tenants/t1/limits");
     const res = await GET(req, context);
     expect(res.status).toBe(200);
@@ -73,7 +77,6 @@ describe("GET /api/admin/tenants/[tenantId]/limits", () => {
   it("support role can read limits", async () => {
     mockCookies.get.mockReturnValue({ value: supportSession() });
     mockPolicies.mockResolvedValue([]);
-    mockCounters.mockResolvedValue([]);
     const req = new NextRequest("http://localhost/api/admin/tenants/t1/limits");
     const res = await GET(req, context);
     expect(res.status).toBe(200);

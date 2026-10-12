@@ -20,6 +20,7 @@ import { prisma } from "@/lib/prisma";
 import {
   checkLimit,
   checkLimitAtomic,
+  checkLimitForLocation,
   getLimitPolicy,
   getAllLimitPolicies,
   setLimitPolicy,
@@ -182,6 +183,52 @@ describe("checkLimitAtomic", () => {
       return (fn as (tx: typeof mockTx) => Promise<unknown>)(mockTx);
     });
     const result = await checkLimitAtomic("t1", "AGENTS");
+    expect(result.status).toBe("block");
+  });
+});
+
+describe("checkLimitForLocation", () => {
+  it("allows when no tenant owns the location", async () => {
+    mockTenant.mockResolvedValue(null);
+    const result = await checkLimitForLocation("loc_orphan", "AGENTS");
+    expect(result).toEqual({ status: "allow" });
+    expect(mockLimitPolicy.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("allows when the tenant is under its hard limit", async () => {
+    mockTenant.mockResolvedValue({ id: "t1", crmLocationId: "loc_1" } as never);
+    mockLimitPolicy.findUnique.mockResolvedValue({
+      id: "p1", tenantId: "t1", metric: "AGENTS", period: "monthly",
+      limitValue: 5, warnAtPct: 80, mode: "hard",
+      createdAt: new Date(), updatedAt: new Date(),
+    } as never);
+    mockAgentCount.mockResolvedValue(1);
+    const result = await checkLimitForLocation("loc_1", "AGENTS");
+    expect(result.status).toBe("allow");
+  });
+
+  it("blocks when the tenant is at its hard limit", async () => {
+    mockTenant.mockResolvedValue({ id: "t1", crmLocationId: "loc_1" } as never);
+    mockLimitPolicy.findUnique.mockResolvedValue({
+      id: "p1", tenantId: "t1", metric: "AGENTS", period: "monthly",
+      limitValue: 2, warnAtPct: 80, mode: "hard",
+      createdAt: new Date(), updatedAt: new Date(),
+    } as never);
+    mockAgentCount.mockResolvedValue(2);
+    const result = await checkLimitForLocation("loc_1", "AGENTS");
+    expect(result.status).toBe("block");
+  });
+
+  it("blocks an import that would push usage past the limit", async () => {
+    mockTenant.mockResolvedValue({ id: "t1", crmLocationId: "loc_1" } as never);
+    mockLimitPolicy.findUnique.mockResolvedValue({
+      id: "p1", tenantId: "t1", metric: "AGENTS", period: "monthly",
+      limitValue: 3, warnAtPct: 80, mode: "hard",
+      createdAt: new Date(), updatedAt: new Date(),
+    } as never);
+    mockAgentCount.mockResolvedValue(1);
+    const result = await checkLimitForLocation("loc_1", "AGENTS", 3);
+    // 1 + 3 = 4 > 3
     expect(result.status).toBe("block");
   });
 });

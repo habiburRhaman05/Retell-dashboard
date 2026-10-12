@@ -6,6 +6,7 @@ import { getLocationName } from "@/lib/location-name";
 import { withLocationName } from "@/lib/naming";
 import { nameTakenInLocation } from "@/lib/agent-name-check";
 import { duplicateAgentMessage } from "@/lib/agent-names";
+import { checkLimitForLocation } from "@/modules/limits";
 
 interface CreateBody {
   locationId?: string;
@@ -61,6 +62,15 @@ export async function POST(request: NextRequest) {
     }
     if (type !== "single" && type !== "flow") {
       return NextResponse.json({ error: "Invalid agent type" }, { status: 400 });
+    }
+
+    // Block before touching Retell so an over-limit create leaves no orphans.
+    const limitCheck = await checkLimitForLocation(locationId, "AGENTS", 1);
+    if (limitCheck.status === "block") {
+      return NextResponse.json(
+        { error: limitCheck.message, code: "LIMIT_REACHED" },
+        { status: 403 }
+      );
     }
 
     // "{name} - {location name}" for the saved agent. Prompts keep the plain

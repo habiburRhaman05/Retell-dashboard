@@ -90,7 +90,8 @@ export function withTenant(handler: TenantHandler): (
         { status: 403 }
       );
     }
-    const params = await context.params;
+    // Next passes params: undefined for routes with no dynamic segment.
+    const params = (await context.params) ?? {};
     const locationId = params.locationId;
     if (locationId && locationId !== session.crmLocationId) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
@@ -117,7 +118,7 @@ export function withAdmin(
     if (request.method !== "GET" && session.role === "support") {
       return NextResponse.json({ error: "Read-only access" }, { status: 403 });
     }
-    const params = await context.params;
+    const params = (await context.params) ?? {};
     return handler(request, session, { params });
   };
 }

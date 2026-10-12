@@ -5,6 +5,7 @@ import { getLocationName } from "@/lib/location-name";
 import { withLocationName } from "@/lib/naming";
 import { nameTakenInLocation } from "@/lib/agent-name-check";
 import { duplicateAgentMessage } from "@/lib/agent-names";
+import { checkLimitForLocation } from "@/modules/limits";
 
 export async function GET(request: NextRequest) {
   const locationId = request.nextUrl.searchParams.get("locationId");
@@ -63,6 +64,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "locationId is required" },
         { status: 400 }
+      );
+    }
+
+    const limitCheck = await checkLimitForLocation(locationId, "AGENTS", 1);
+    if (limitCheck.status === "block") {
+      return NextResponse.json(
+        { error: limitCheck.message, code: "LIMIT_REACHED" },
+        { status: 403 }
       );
     }
 

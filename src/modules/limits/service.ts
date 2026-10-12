@@ -7,6 +7,21 @@ export type LimitResult =
   | { status: "warn"; used: number; limit: number; metric: MetricType }
   | { status: "block"; used: number; limit: number; metric: MetricType; message: string };
 
+// Enforce a limit for a CRM location: resolves the owning tenant first.
+// Locations without a tenant (or metrics without a policy) are always allowed.
+export async function checkLimitForLocation(
+  locationId: string,
+  metric: MetricType,
+  amount: number = 1
+): Promise<LimitResult> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { crmLocationId: locationId },
+    select: { id: true },
+  });
+  if (!tenant) return { status: "allow" };
+  return checkLimit(tenant.id, metric, amount);
+}
+
 export async function checkLimit(
   tenantId: string,
   metric: MetricType,
@@ -72,10 +87,12 @@ export async function checkLimitAtomic(
   });
 }
 
-async function getCurrentUsage(
+// Live usage for a metric: AGENTS / KNOWLEDGE_BASES are counted from their
+// mapping tables (usageCounter only ever holds CALLS / CALL_MINUTES).
+export async function getCurrentUsage(
   tenantId: string,
   metric: MetricType,
-  period: string
+  period: string = "monthly"
 ): Promise<number> {
   if (metric === "AGENTS") {
     return prisma.locationAgent.count({

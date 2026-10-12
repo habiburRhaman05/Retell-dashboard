@@ -8,8 +8,10 @@ import { GET, POST } from "@/app/api/retell/agents/route";
 // orphan cleanup, naming and conflict rules are what runs for real.
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    locationAgent: { findMany: vi.fn(), deleteMany: vi.fn(), create: vi.fn() },
+    locationAgent: { findMany: vi.fn(), deleteMany: vi.fn(), create: vi.fn(), count: vi.fn() },
     location: { upsert: vi.fn(), findUnique: vi.fn() },
+    tenant: { findUnique: vi.fn() },
+    limitPolicy: { findUnique: vi.fn() },
   },
 }));
 
@@ -23,6 +25,9 @@ vi.mock("@/lib/retell-api", async (importOriginal) => {
 });
 
 const findUnique = vi.mocked(prisma.location.findUnique);
+const tenantFindUnique = vi.mocked(prisma.tenant.findUnique);
+const limitPolicyFindUnique = vi.mocked(prisma.limitPolicy.findUnique);
+const agentCount = vi.mocked(prisma.locationAgent.count);
 const findMany = vi.mocked(prisma.locationAgent.findMany);
 const deleteMany = vi.mocked(prisma.locationAgent.deleteMany);
 const createMapping = vi.mocked(prisma.locationAgent.create);
@@ -54,6 +59,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   upsertLocation.mockResolvedValue({} as never);
   createMapping.mockResolvedValue({} as never);
+  // no tenant owns this location in tests, so no limit policy applies
+  tenantFindUnique.mockResolvedValue(null as never);
   // every test location is called "Bright AI", so names get that suffix
   findUnique.mockResolvedValue({ name: "Bright AI" } as never);
 });
@@ -220,5 +227,51 @@ describe("POST /api/retell/agents", () => {
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "voice_id is invalid" });
     expect(createMapping).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when the tenant is at its agent limit", async () => {
+    tenantFindUnique.mockResolvedValue({ id: "t1", crmLocationId: "loc_1" } as never);
+    limitPolicyFindUnique.mockResolvedValue({
+      tenantId: "t1",
+      metric: "AGENTS",
+      limitValue: 2,
+      period: "monthly",
+      warnAtPct: 80,
+      mode: "hard",
+    } as never);
+    agentCount.mockResolvedValue(2 as never); // 2 of 2 used
+
+    const res = await POST(
+      postRequest({ locationId: "loc_1", agent_name: "Third", voice_id: "v1" })
+    );
+
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.code).toBe("LIMIT_REACHED");
+    expect(body.error).toMatch(/2\/2/);
+    expect(createAgent).not.toHaveBeenCalled();
+    expect(createMapping).not.toHaveBeenCalled();
+  });
+
+  it("allows the create when under the agent limit", async () => {
+    tenantFindUnique.mockResolvedValue({ id: "t1", crmLocationId: "loc_1" } as never);
+    limitPolicyFindUnique.mockResolvedValue({
+      tenantId: "t1",
+      metric: "AGENTS",
+      limitValue: 5,
+      period: "monthly",
+      warnAtPct: 80,
+      mode: "hard",
+    } as never);
+    agentCount.mockResolvedValue(1 as never);
+    findMany.mockResolvedValue([] as never);
+    createAgent.mockResolvedValue({ agent_id: "a_new", agent_name: "Third - Bright AI" } as never);
+
+    const res = await POST(
+      postRequest({ locationId: "loc_1", agent_name: "Third", voice_id: "v1" })
+    );
+
+    expect(res.status).toBe(201);
+    expect(createAgent).toHaveBeenCalled();
   });
 });

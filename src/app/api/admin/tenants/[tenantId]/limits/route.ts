@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAdmin } from "@/modules/auth/middleware";
-import { getAllLimitPolicies, setLimitPolicy, deleteLimitPolicy } from "@/modules/limits";
-import { getUsageCounters } from "@/modules/usage";
+import { getAllLimitPolicies, setLimitPolicy, deleteLimitPolicy, getCurrentUsage } from "@/modules/limits";
 import { writeAuditLog } from "@/modules/audit";
 import { z } from "zod";
 
@@ -15,15 +14,15 @@ const setLimitSchema = z.object({
 
 export const GET = withAdmin(async (_request: NextRequest, _session, { params }) => {
   const { tenantId } = params;
-  const [policies, counters] = await Promise.all([
-    getAllLimitPolicies(tenantId),
-    getUsageCounters(tenantId),
-  ]);
-  const counterMap = new Map(counters.map((c) => [c.metric, c.value]));
-  const result = policies.map((p) => ({
-    ...p,
-    currentUsage: counterMap.get(p.metric) ?? 0,
-  }));
+  const policies = await getAllLimitPolicies(tenantId);
+  // AGENTS / KNOWLEDGE_BASES are not tracked in usageCounter, so read each
+  // metric from the same live counts enforcement uses.
+  const result = await Promise.all(
+    policies.map(async (p) => ({
+      ...p,
+      currentUsage: await getCurrentUsage(tenantId, p.metric, p.period),
+    }))
+  );
   return NextResponse.json(result);
 });
 

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { withTenant } from "@/modules/auth/middleware";
-import { getAllLimitPolicies } from "@/modules/limits";
+import { getAllLimitPolicies, getCurrentUsage } from "@/modules/limits";
 import { getActiveFeatureLocks, getAllFeatures } from "@/modules/enforcement";
-import { getUsageCounters } from "@/modules/usage";
 
 const FEATURE_METRICS: Record<string, string> = {
   "agents.create": "AGENTS",
@@ -14,17 +13,15 @@ const FEATURE_METRICS: Record<string, string> = {
 export const GET = withTenant(async (_request, session) => {
   const tenantId = session.tenantId;
 
-  const [policies, locks, features, counters] = await Promise.all([
+  const [policies, locks, features] = await Promise.all([
     getAllLimitPolicies(tenantId),
     getActiveFeatureLocks(tenantId),
     getAllFeatures(tenantId),
-    getUsageCounters(tenantId),
   ]);
 
   const policyMap = new Map(policies.map((p) => [p.metric, p]));
   const lockSet = new Set(locks.map((l) => l.featureKey));
   const featureMap = new Map(features.map((f) => [f.featureKey, f]));
-  const counterMap = new Map(counters.map((c) => [c.metric, c.value]));
 
   const entitlements: Record<string, {
     enabled: boolean;
@@ -38,7 +35,13 @@ export const GET = withTenant(async (_request, session) => {
     const policy = policyMap.get(metricKey as never);
     const feature = featureMap.get(featureKey);
     const locked = lockSet.has(featureKey);
-    const used = counterMap.get(metricKey as never) ?? 0;
+    // Agents and knowledge bases live in their mapping tables, not in
+    // usageCounter, so read usage from the same source enforcement uses.
+    const used = await getCurrentUsage(
+      tenantId,
+      metricKey as never,
+      policy?.period ?? "monthly"
+    );
 
     const featureEnabled = feature ? feature.enabled : true;
     const limit = policy?.limitValue ?? null;

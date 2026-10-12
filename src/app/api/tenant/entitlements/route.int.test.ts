@@ -6,7 +6,10 @@ vi.mock("@/lib/prisma", () => ({
     limitPolicy: { findMany: vi.fn() },
     featureLock: { findMany: vi.fn() },
     tenantFeature: { findMany: vi.fn() },
-    usageCounter: { findMany: vi.fn() },
+    usageCounter: { findUnique: vi.fn(), findMany: vi.fn() },
+    tenant: { findUnique: vi.fn() },
+    locationAgent: { count: vi.fn() },
+    locationKnowledgeBase: { count: vi.fn() },
   },
 }));
 
@@ -21,7 +24,10 @@ import { GET } from "./route";
 const mockPolicies = vi.mocked(prisma.limitPolicy.findMany);
 const mockLocks = vi.mocked(prisma.featureLock.findMany);
 const mockFeatures = vi.mocked(prisma.tenantFeature.findMany);
-const mockCounters = vi.mocked(prisma.usageCounter.findMany);
+const mockCounters = vi.mocked(prisma.usageCounter.findUnique);
+const mockTenant = vi.mocked(prisma.tenant.findUnique);
+const mockAgentCount = vi.mocked(prisma.locationAgent.count);
+const mockKbCount = vi.mocked(prisma.locationKnowledgeBase.count);
 
 function tenantSession() {
   return Buffer.from(JSON.stringify({
@@ -31,7 +37,15 @@ function tenantSession() {
 
 const context = { params: Promise.resolve({}) };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // usage comes from live counts: an empty tenant has no agents or KBs and
+  // no call counters for the current period
+  mockTenant.mockResolvedValue({ crmLocationId: "loc_1" } as never);
+  mockAgentCount.mockResolvedValue(0 as never);
+  mockKbCount.mockResolvedValue(0 as never);
+  mockCounters.mockResolvedValue(null as never);
+});
 
 describe("GET /api/tenant/entitlements", () => {
   it("returns 401 without tenant session", async () => {
@@ -46,7 +60,6 @@ describe("GET /api/tenant/entitlements", () => {
     mockPolicies.mockResolvedValue([]);
     mockLocks.mockResolvedValue([]);
     mockFeatures.mockResolvedValue([]);
-    mockCounters.mockResolvedValue([]);
     const req = new NextRequest("http://localhost/api/tenant/entitlements");
     const res = await GET(req, context);
     expect(res.status).toBe(200);
@@ -62,7 +75,6 @@ describe("GET /api/tenant/entitlements", () => {
     mockPolicies.mockResolvedValue([]);
     mockLocks.mockResolvedValue([]);
     mockFeatures.mockResolvedValue([]);
-    mockCounters.mockResolvedValue([]);
     const req = new NextRequest("http://localhost/api/tenant/entitlements");
     const res = await GET(req, context);
     const data = await res.json();
@@ -79,7 +91,6 @@ describe("GET /api/tenant/entitlements", () => {
     mockFeatures.mockResolvedValue([
       { featureKey: "agents.create", enabled: false, reason: "Admin disabled" },
     ] as never);
-    mockCounters.mockResolvedValue([]);
     const req = new NextRequest("http://localhost/api/tenant/entitlements");
     const res = await GET(req, context);
     const data = await res.json();
@@ -94,7 +105,6 @@ describe("GET /api/tenant/entitlements", () => {
       { featureKey: "calls.make", metric: "CALLS", reason: "Limit" },
     ] as never);
     mockFeatures.mockResolvedValue([]);
-    mockCounters.mockResolvedValue([]);
     const req = new NextRequest("http://localhost/api/tenant/entitlements");
     const res = await GET(req, context);
     const data = await res.json();
@@ -109,9 +119,7 @@ describe("GET /api/tenant/entitlements", () => {
     ] as never);
     mockLocks.mockResolvedValue([]);
     mockFeatures.mockResolvedValue([]);
-    mockCounters.mockResolvedValue([
-      { metric: "CALLS", value: 85 },
-    ] as never);
+    mockCounters.mockResolvedValue({ metric: "CALLS", value: 85 } as never);
     const req = new NextRequest("http://localhost/api/tenant/entitlements");
     const res = await GET(req, context);
     const data = await res.json();
@@ -127,9 +135,8 @@ describe("GET /api/tenant/entitlements", () => {
     ] as never);
     mockLocks.mockResolvedValue([]);
     mockFeatures.mockResolvedValue([]);
-    mockCounters.mockResolvedValue([
-      { metric: "AGENTS", value: 5 },
-    ] as never);
+    // agents are counted from locationAgent, not from usageCounter
+    mockAgentCount.mockResolvedValue(5 as never);
     const req = new NextRequest("http://localhost/api/tenant/entitlements");
     const res = await GET(req, context);
     const data = await res.json();

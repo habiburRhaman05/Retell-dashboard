@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
+import { checkLimitForLocation } from "@/modules/limits";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,6 +35,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "No valid agents to import. They may already be assigned to a location." },
         { status: 400 }
+      );
+    }
+
+    const limitCheck = await checkLimitForLocation(locationId, "AGENTS", toImport.length);
+    if (limitCheck.status === "block") {
+      return NextResponse.json(
+        { error: limitCheck.message, code: "LIMIT_REACHED" },
+        { status: 403 }
       );
     }
 

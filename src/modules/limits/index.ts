@@ -1,6 +1,8 @@
 export {
   checkLimit,
   checkLimitAtomic,
+  checkLimitForLocation,
+  getCurrentUsage,
   getLimitPolicy,
   getAllLimitPolicies,
   setLimitPolicy,
