@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyRetellSignature, processCallEnded } from "@/modules/usage";
+import { checkRetellSignature } from "@/modules/usage/webhook";
+import { processCallEnded } from "@/modules/usage";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
@@ -8,7 +9,10 @@ export async function POST(request: NextRequest) {
 
   // Retell signs with the API key, not a separate secret. Check before touching
   // the database so unsigned requests cannot write anything.
-  if (!verifyRetellSignature(rawBody, signature, process.env.RETELL_API_KEY ?? "")) {
+  const check = checkRetellSignature(rawBody, signature, process.env.RETELL_API_KEY ?? "");
+  if (!check.ok) {
+    // Visible in the host's logs so a 401 can be diagnosed. Never log the key or the signature.
+    console.warn("[retell-webhook] rejected", { ...check, bodyBytes: rawBody.length });
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 

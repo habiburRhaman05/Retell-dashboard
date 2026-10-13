@@ -58,6 +58,23 @@ describe("POST /api/webhooks/retell", () => {
     expect(createInbox).not.toHaveBeenCalled();
   });
 
+  it("logs why a webhook was rejected, never the key or the signature", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const body = JSON.stringify({ event: "call_ended", call: { call_id: "c1" } });
+
+    await POST(makeRequest(body, sign(body, Date.now(), "key_someone_else")));
+
+    expect(warn).toHaveBeenCalledWith("[retell-webhook] rejected", {
+      ok: false,
+      reason: "digest_mismatch",
+      bodyBytes: body.length,
+    });
+    const logged = JSON.stringify(warn.mock.calls);
+    expect(logged).not.toContain(API_KEY);
+    expect(logged).not.toContain("key_someone_else");
+    warn.mockRestore();
+  });
+
   it("rejects a missing signature with 401", async () => {
     const body = JSON.stringify({ event: "call_ended", call: { call_id: "c1" } });
     const res = await POST(makeRequest(body, null));

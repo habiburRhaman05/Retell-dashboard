@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createHmac } from "crypto";
-import { verifyRetellSignature } from "../webhook";
+import { checkRetellSignature, verifyRetellSignature } from "../webhook";
 
 describe("verifyRetellSignature", () => {
   const apiKey = "key_test_abc";
@@ -61,5 +61,26 @@ describe("verifyRetellSignature", () => {
   it("rejects everything when no API key is configured", () => {
     expect(verifyRetellSignature(body, sign(body, now, ""), "", now)).toBe(false);
     expect(verifyRetellSignature(body, sign(body, now, " "), " ", now)).toBe(false);
+  });
+
+  describe("checkRetellSignature reasons", () => {
+    it("accepts a valid signature", () => {
+      expect(checkRetellSignature(body, sign(body), apiKey, now)).toEqual({ ok: true });
+    });
+
+    it("says why a webhook was rejected, without exposing key material", () => {
+      expect(checkRetellSignature(body, sign(body), "", now)).toEqual({ ok: false, reason: "no_api_key" });
+      expect(checkRetellSignature(body, null, apiKey, now)).toEqual({ ok: false, reason: "no_header" });
+      expect(checkRetellSignature(body, "garbage", apiKey, now)).toEqual({ ok: false, reason: "bad_format" });
+      expect(checkRetellSignature(body, sign(body, now, "key_other"), apiKey, now)).toEqual({
+        ok: false,
+        reason: "digest_mismatch",
+      });
+      expect(checkRetellSignature(body, sign(body, now - 600_000), apiKey, now)).toEqual({
+        ok: false,
+        reason: "stale_timestamp",
+        skewMs: 600_000,
+      });
+    });
   });
 });
