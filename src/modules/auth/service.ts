@@ -44,6 +44,13 @@ export async function verifyAdminLogin(
   };
 }
 
+// A random, unguessable bearer secret for the ?companyId= auto-login link.
+// It is not the admin's visible id or email, so it can be rotated or revoked
+// without changing who the admin is.
+export function generateCompanyId(): string {
+  return crypto.randomBytes(24).toString("base64url");
+}
+
 export async function createAdminUser(data: {
   email: string;
   name?: string;
@@ -57,6 +64,20 @@ export async function createAdminUser(data: {
       name: data.name,
       passwordHash,
       role: data.role ?? "support",
+      companyId: generateCompanyId(),
     },
   });
+}
+
+/** The admin an auto-login link's companyId belongs to, or null if unknown. */
+export async function verifyAdminByCompanyId(
+  companyId: string
+): Promise<AdminSession | null> {
+  const admin = await prisma.adminUser.findUnique({ where: { companyId } });
+  if (!admin) return null;
+  return {
+    adminId: admin.id,
+    email: admin.email,
+    role: admin.role,
+  };
 }

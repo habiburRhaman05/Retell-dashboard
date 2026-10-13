@@ -86,6 +86,10 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
   const [limitsLoading, setLimitsLoading] = useState(false);
   const [features, setFeatures] = useState<FeatureRow[]>([]);
   const [featuresLoading, setFeaturesLoading] = useState(false);
+  const [disableTarget, setDisableTarget] = useState<{ key: string; label: string } | null>(null);
+  const [disableReason, setDisableReason] = useState("");
+  const [disableConfirmText, setDisableConfirmText] = useState("");
+  const [disableSaving, setDisableSaving] = useState(false);
   const [limitForm, setLimitForm] = useState({
     metric: "AGENTS",
     limitValue: "",
@@ -189,6 +193,29 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
       setLinkState((prev) => ({ ...prev, copied: true }));
     } catch {
       setLinkState((prev) => ({ ...prev, error: "Copy failed. Select the link and copy it by hand." }));
+    }
+  }
+
+  async function setFeature(featureKey: string, enabled: boolean, reason: string | null) {
+    await fetch(`/api/admin/tenants/${tenant.id}/features`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ featureKey, enabled, reason }),
+    });
+    accessFetched.current = false;
+    fetchLimitsAndFeatures();
+  }
+
+  async function confirmDisable() {
+    if (!disableTarget) return;
+    setDisableSaving(true);
+    try {
+      await setFeature(disableTarget.key, false, disableReason || null);
+      setDisableTarget(null);
+      setDisableReason("");
+      setDisableConfirmText("");
+    } finally {
+      setDisableSaving(false);
     }
   }
 
@@ -574,29 +601,35 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
                             <p className="text-xs text-gray-400 mt-0.5">{existing.reason}</p>
                           )}
                         </div>
-                        <button
-                          onClick={async () => {
-                            const reason = !isEnabled ? null : prompt("Reason for disabling (optional):");
-                            await fetch(`/api/admin/tenants/${tenant.id}/features`, {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                featureKey: feat.key,
-                                enabled: !isEnabled,
-                                reason: reason || null,
-                              }),
-                            });
-                            accessFetched.current = false;
-                            fetchLimitsAndFeatures();
-                          }}
-                          className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
-                            isEnabled
-                              ? "bg-green-100 text-green-700 hover:bg-green-200"
-                              : "bg-red-100 text-red-700 hover:bg-red-200"
-                          }`}
-                        >
-                          {isEnabled ? "Enabled" : "Disabled"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-medium ${isEnabled ? "text-green-700" : "text-red-700"}`}>
+                            {isEnabled ? "Enabled" : "Disabled"}
+                          </span>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={isEnabled}
+                            aria-label={`${isEnabled ? "Disable" : "Enable"} ${feat.label}`}
+                            onClick={() => {
+                              if (isEnabled) {
+                                setDisableTarget({ key: feat.key, label: feat.label });
+                                setDisableReason("");
+                                setDisableConfirmText("");
+                              } else {
+                                setFeature(feat.key, true, null);
+                              }
+                            }}
+                            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
+                              isEnabled ? "bg-green-500" : "bg-gray-300"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                                isEnabled ? "translate-x-6" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -803,6 +836,93 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
           )}
         </div>
       )}
+
+      {disableTarget && (
+        <DisableFeatureModal
+          label={disableTarget.label}
+          reason={disableReason}
+          onReasonChange={setDisableReason}
+          confirmText={disableConfirmText}
+          onConfirmTextChange={setDisableConfirmText}
+          saving={disableSaving}
+          onCancel={() => setDisableTarget(null)}
+          onConfirm={confirmDisable}
+        />
+      )}
+    </div>
+  );
+}
+
+function DisableFeatureModal({
+  label,
+  reason,
+  onReasonChange,
+  confirmText,
+  onConfirmTextChange,
+  saving,
+  onCancel,
+  onConfirm,
+}: {
+  label: string;
+  reason: string;
+  onReasonChange: (v: string) => void;
+  confirmText: string;
+  onConfirmTextChange: (v: string) => void;
+  saving: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const confirmed = confirmText.trim().toLowerCase() === "delete";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+        <h3 className="text-base font-semibold text-gray-900 mb-1">Disable &quot;{label}&quot;?</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          The tenant will immediately lose access to this feature. They will see a message explaining why.
+        </p>
+
+        <label className="block text-xs font-medium text-gray-700 mb-1">Reason (optional)</label>
+        <textarea
+          value={reason}
+          onChange={(e) => onReasonChange(e.target.value)}
+          placeholder="Shown to the tenant, e.g. billing issue"
+          rows={2}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg mb-4 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+        />
+
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Type <span className="font-mono font-semibold text-red-600">delete</span> to confirm
+        </label>
+        <input
+          type="text"
+          value={confirmText}
+          onChange={(e) => onConfirmTextChange(e.target.value)}
+          placeholder="delete"
+          autoComplete="off"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg mb-5 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400 font-mono"
+        />
+
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={saving}
+            className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={!confirmed || saving}
+            className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? "Disabling..." : "Confirm"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -165,6 +165,9 @@ model AdminUser {
   name         String?
   role         AdminRole @default(support)
   passwordHash String    @map("password_hash")
+  // Opaque random auto-login secret (not the admin's email or id). Treated like
+  // a password: whoever holds it is signed in as this admin via ?companyId=.
+  companyId    String?   @unique @map("company_id")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 

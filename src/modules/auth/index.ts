@@ -1,7 +1,9 @@
 export {
   verifyTenantAccess,
   verifyAdminLogin,
+  verifyAdminByCompanyId,
   createAdminUser,
+  generateCompanyId,
   type TenantSession,
   type AdminSession,
 } from "./service";

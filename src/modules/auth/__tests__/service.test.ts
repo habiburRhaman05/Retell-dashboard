@@ -9,7 +9,13 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 import { prisma } from "@/lib/prisma";
-import { verifyTenantAccess, verifyAdminLogin, createAdminUser } from "../service";
+import {
+  verifyTenantAccess,
+  verifyAdminLogin,
+  verifyAdminByCompanyId,
+  createAdminUser,
+  generateCompanyId,
+} from "../service";
 
 const findTenant = vi.mocked(prisma.tenant.findUnique);
 const findAdmin = vi.mocked(prisma.adminUser.findUnique);
@@ -93,7 +99,7 @@ describe("verifyAdminLogin", () => {
 });
 
 describe("createAdminUser", () => {
-  it("creates admin with hashed password", async () => {
+  it("creates admin with hashed password and a random companyId", async () => {
     createAdmin.mockResolvedValue({ id: "a2" } as never);
 
     await createAdminUser({
@@ -110,6 +116,7 @@ describe("createAdminUser", () => {
         name: "New Admin",
         passwordHash: expectedHash,
         role: "support",
+        companyId: expect.any(String),
       },
     });
   });
@@ -122,5 +129,45 @@ describe("createAdminUser", () => {
     expect(createAdmin).toHaveBeenCalledWith({
       data: expect.objectContaining({ role: "support" }),
     });
+  });
+
+  it("generates a different companyId each time", async () => {
+    createAdmin.mockResolvedValue({ id: "a4" } as never);
+    await createAdminUser({ email: "x@y.com", password: "p" });
+    await createAdminUser({ email: "y@z.com", password: "p" });
+
+    const [first, second] = createAdmin.mock.calls;
+    expect(first[0].data.companyId).not.toEqual(second[0].data.companyId);
+  });
+});
+
+describe("generateCompanyId", () => {
+  it("returns a long, URL-safe, unguessable token", () => {
+    const a = generateCompanyId();
+    const b = generateCompanyId();
+    expect(a).not.toEqual(b);
+    expect(a.length).toBeGreaterThanOrEqual(24);
+    expect(a).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+});
+
+describe("verifyAdminByCompanyId", () => {
+  it("returns session when companyId matches an admin", async () => {
+    findAdmin.mockResolvedValue({
+      id: "a1",
+      email: "admin@test.com",
+      role: "owner",
+      companyId: "tok_abc123",
+    } as never);
+
+    const session = await verifyAdminByCompanyId("tok_abc123");
+    expect(session).toEqual({ adminId: "a1", email: "admin@test.com", role: "owner" });
+    expect(findAdmin).toHaveBeenCalledWith({ where: { companyId: "tok_abc123" } });
+  });
+
+  it("returns null for an unknown companyId", async () => {
+    findAdmin.mockResolvedValue(null);
+    const session = await verifyAdminByCompanyId("nope");
+    expect(session).toBeNull();
   });
 });

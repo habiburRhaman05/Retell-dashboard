@@ -64,12 +64,14 @@ function VoiceCard({
   v,
   isSelected,
   isPlaying,
+  isLoading,
   onSelect,
   onTogglePlay,
 }: {
   v: RetellVoice;
   isSelected: boolean;
   isPlaying: boolean;
+  isLoading: boolean;
   onSelect: () => void;
   onTogglePlay: () => void;
 }) {
@@ -103,18 +105,25 @@ function VoiceCard({
       <button
         type="button"
         aria-label={isPlaying ? `Pause ${v.voice_name}` : `Play ${v.voice_name}`}
+        aria-busy={isLoading}
         onClick={(e) => {
           e.stopPropagation();
           onTogglePlay();
         }}
         className={cn(
-          "w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-colors",
-          isPlaying
+          "w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-colors cursor-pointer",
+          isPlaying || isLoading
             ? "border-brand-500 bg-brand-500 text-white"
             : "border-gray-200 text-gray-600 hover:bg-gray-50"
         )}
       >
-        {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+        {isLoading ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : isPlaying ? (
+          <Pause className="w-3.5 h-3.5" />
+        ) : (
+          <Play className="w-3.5 h-3.5" />
+        )}
       </button>
     </div>
   );
@@ -139,6 +148,7 @@ export function VoicePickerModal({
   const [accent, setAccent] = useState("");
   const [search, setSearch] = useState("");
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -155,6 +165,7 @@ export function VoicePickerModal({
     }
     audioRef.current = null;
     setPlayingId(null);
+    setLoadingId(null);
   };
 
   useEffect(() => {
@@ -163,6 +174,7 @@ export function VoicePickerModal({
       if (a) {
         a.onended = null;
         a.onerror = null;
+        a.onplaying = null;
         a.pause();
         a.removeAttribute("src");
         a.load();
@@ -264,11 +276,13 @@ export function VoicePickerModal({
     const audio = new Audio(src);
     audioRef.current = audio;
     setPlayingId(v.voice_id);
+    setLoadingId(v.voice_id);
 
     const fail = (reason: string, retry: boolean) => {
       if (audioRef.current !== audio) return;
       audio.onended = null;
       audio.onerror = null;
+      audio.onplaying = null;
       audio.pause();
       if (retry && !viaServer) {
         startAudio(v, `/api/retell/voices/preview?voiceId=${encodeURIComponent(v.voice_id)}`, true);
@@ -276,11 +290,16 @@ export function VoicePickerModal({
       }
       audioRef.current = null;
       setPlayingId((cur) => (cur === v.voice_id ? null : cur));
+      setLoadingId((cur) => (cur === v.voice_id ? null : cur));
       setPreviewError(`Could not play the preview for ${v.voice_name}. ${reason}`.trim());
     };
 
     audio.onended = () => setPlayingId((cur) => (cur === v.voice_id ? null : cur));
     audio.onerror = () => fail(describeMediaError(audio.error?.code), true);
+    // Playback can take a moment to actually start (buffering, slow network).
+    // `onplaying` fires once audio is genuinely flowing, so the spinner stays
+    // up until there is real sound rather than just until play() resolves.
+    audio.onplaying = () => setLoadingId((cur) => (cur === v.voice_id ? null : cur));
     audio.play().catch((err: unknown) => {
       // An interrupted play (user clicked another voice) is not an error.
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -458,7 +477,7 @@ export function VoicePickerModal({
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {recommended.map((v) => (
-                      <VoiceCard key={`rec-${v.voice_id}`} v={v} isSelected={v.voice_id === selected} isPlaying={playingId === v.voice_id} onSelect={() => setSelected(v.voice_id)} onTogglePlay={() => togglePlay(v)} />
+                      <VoiceCard key={`rec-${v.voice_id}`} v={v} isSelected={v.voice_id === selected} isPlaying={playingId === v.voice_id} isLoading={loadingId === v.voice_id} onSelect={() => setSelected(v.voice_id)} onTogglePlay={() => togglePlay(v)} />
                     ))}
                   </div>
                 </div>
@@ -471,7 +490,7 @@ export function VoicePickerModal({
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {filtered.map((v) => (
-                      <VoiceCard key={v.voice_id} v={v} isSelected={v.voice_id === selected} isPlaying={playingId === v.voice_id} onSelect={() => setSelected(v.voice_id)} onTogglePlay={() => togglePlay(v)} />
+                      <VoiceCard key={v.voice_id} v={v} isSelected={v.voice_id === selected} isPlaying={playingId === v.voice_id} isLoading={loadingId === v.voice_id} onSelect={() => setSelected(v.voice_id)} onTogglePlay={() => togglePlay(v)} />
                     ))}
                   </div>
                 </>

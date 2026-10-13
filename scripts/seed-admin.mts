@@ -19,11 +19,13 @@ async function main() {
   }
 
   const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
+  const companyId = crypto.randomBytes(24).toString("base64url");
   const admin = await prisma.adminUser.create({
-    data: { email, passwordHash, role: "owner", name: "Admin" },
+    data: { email, passwordHash, role: "owner", name: "Admin", companyId },
   });
 
   console.log(`Created admin user: ${admin.email} (role: owner)`);
+  console.log(`Auto-login link (treat like a password, do not share): /admin?companyId=${companyId}`);
 }
 
 main()

@@ -11,6 +11,7 @@ const API_DIR = path.join(process.cwd(), "src", "app", "api");
 // Reachable without a session on purpose; each has its own proof of identity.
 const PUBLIC: Record<string, string> = {
   "auth/admin/route.ts": "admin login (email and password)",
+  "auth/admin/company/route.ts": "admin auto-login via opaque companyId token (same trust model as a tenant signed link)",
   "auth/admin/logout/route.ts": "clears the caller's own admin cookie",
   "auth/tenant/route.ts": "tenant login (signed link token or existing session)",
   "health/route.ts": "uptime probe, reveals nothing but status",
