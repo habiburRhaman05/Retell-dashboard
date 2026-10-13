@@ -8,7 +8,6 @@ import {
 import { useToast } from "@/components/layout/toast";
 import { KnowledgeBaseCard } from "@/components/knowledge-base/kb-card";
 import { CreateKnowledgeBaseModal } from "@/components/knowledge-base/create-kb-modal";
-import { ImportKnowledgeBaseModal } from "@/components/knowledge-base/import-kb-modal";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { PageHeader } from "@/components/ui/page-header";
@@ -19,7 +18,6 @@ import {
   List,
   ArrowUpDown,
   Plus,
-  Download,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -35,7 +33,6 @@ export default function KnowledgeBasePage() {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "status">("name");
-  const [showImport, setShowImport] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
   const filteredKbs = useMemo(() => {
@@ -80,18 +77,9 @@ export default function KnowledgeBasePage() {
         description="Manage documents, text, and URLs your agents can reference"
         className="mb-6"
         actions={
-          <>
-            <Button
-              variant="secondary"
-              icon={Download}
-              onClick={() => setShowImport(true)}
-            >
-              Import
-            </Button>
-            <Button icon={Plus} onClick={() => setShowCreate(true)}>
-              Create Knowledge Base
-            </Button>
-          </>
+          <Button icon={Plus} onClick={() => setShowCreate(true)}>
+            Create Knowledge Base
+          </Button>
         }
       />
 
@@ -163,10 +151,10 @@ export default function KnowledgeBasePage() {
             description={
               search
                 ? "Try a different search term"
-                : "Import existing knowledge bases or create a new one"
+                : "Create a new knowledge base to get started"
             }
-            actionLabel={search ? undefined : "Import Knowledge Bases"}
-            onAction={search ? undefined : () => setShowImport(true)}
+            actionLabel={search ? undefined : "Create Knowledge Base"}
+            onAction={search ? undefined : () => setShowCreate(true)}
           />
         )}
 
@@ -198,13 +186,6 @@ export default function KnowledgeBasePage() {
           Showing {filteredKbs.length} of {kbs.length} knowledge base
           {kbs.length !== 1 ? "s" : ""}
         </div>
-      )}
-
-      {showImport && (
-        <ImportKnowledgeBaseModal
-          locationId={locationId}
-          onClose={() => setShowImport(false)}
-        />
       )}
 
       {showCreate && (

@@ -18,14 +18,33 @@ export async function createTenant(data: {
   name: string;
   email?: string;
 }) {
-  return prisma.tenant.create({ data });
+  const tenant = await prisma.tenant.create({ data });
+
+  // Keep the Location table in sync so agent/KB naming uses the tenant name.
+  await prisma.location.upsert({
+    where: { locationId: data.crmLocationId },
+    create: { locationId: data.crmLocationId, name: data.name },
+    update: { name: data.name },
+  });
+
+  return tenant;
 }
 
 export async function updateTenant(
   id: string,
   data: { name?: string; email?: string; status?: TenantStatus }
 ) {
-  return prisma.tenant.update({ where: { id }, data });
+  const tenant = await prisma.tenant.update({ where: { id }, data });
+
+  // If the name changed, keep the Location table in sync.
+  if (data.name) {
+    await prisma.location.updateMany({
+      where: { locationId: tenant.crmLocationId },
+      data: { name: data.name },
+    });
+  }
+
+  return tenant;
 }
 
 export async function getLocationName(locationId: string): Promise<string | null> {

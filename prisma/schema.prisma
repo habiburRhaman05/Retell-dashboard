@@ -66,6 +66,7 @@ model LocationAgent {
   locationId    String   @map("location_id")
   retellAgentId String   @map("retell_agent_id")
   agentName     String?  @map("agent_name")
+  assignedBy    String?  @map("assigned_by")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
@@ -82,6 +83,7 @@ model LocationKnowledgeBase {
   locationId             String   @map("location_id")
   retellKnowledgeBaseId  String   @map("retell_knowledge_base_id")
   knowledgeBaseName      String?  @map("knowledge_base_name")
+  assignedBy             String?  @map("assigned_by")
   createdAt              DateTime @default(now()) @map("created_at")
   updatedAt              DateTime @updatedAt @map("updated_at")
 
@@ -91,6 +93,28 @@ model LocationKnowledgeBase {
   @@index([locationId])
   @@index([retellKnowledgeBaseId])
   @@map("location_knowledge_bases")
+}
+
+// ─── Private items (admin-hidden from all sub-accounts) ─────
+
+enum RetellItemType {
+  agent
+  knowledge_base
+
+  @@map("retell_item_type")
+}
+
+model PrivateRetellItem {
+  id        String         @id @default(cuid())
+  retellId  String         @map("retell_id")
+  itemType  RetellItemType @map("item_type")
+  markedBy  String         @map("marked_by")
+  reason    String?
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@unique([retellId, itemType])
+  @@index([itemType])
+  @@map("private_retell_items")
 }
 
 // ─── New tables for multi-tenant SaaS ───────────────────────

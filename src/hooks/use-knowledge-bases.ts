@@ -159,32 +159,3 @@ export function useDeleteKnowledgeBaseSource(kbId: string, locationId: string) {
   });
 }
 
-export function useAvailableKnowledgeBases(locationId: string, enabled = false) {
-  return useQuery<KnowledgeBase[]>({
-    queryKey: ["available-knowledge-bases", locationId],
-    queryFn: () =>
-      fetchJson<KnowledgeBase[]>(
-        `/api/retell/knowledge-base/available?locationId=${encodeURIComponent(locationId)}`
-      ),
-    enabled: !!locationId && enabled,
-  });
-}
-
-export function useImportKnowledgeBases(locationId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (knowledgeBaseIds: string[]) =>
-      fetchJson<{ imported: number; knowledgeBaseIds: string[] }>(
-        "/api/retell/knowledge-base/import",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ locationId, knowledgeBaseIds }),
-        }
-      ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["knowledge-bases", locationId] });
-      queryClient.invalidateQueries({ queryKey: ["available-knowledge-bases", locationId] });
-    },
-  });
-}

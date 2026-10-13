@@ -4,8 +4,6 @@ import { useLocation } from "@/providers/location-provider";
 import {
   useAgents,
   useDeleteAgent,
-  useAvailableAgents,
-  useImportAgents,
 } from "@/hooks/use-agents";
 import { useToast } from "@/components/layout/toast";
 import { AgentCard } from "@/components/agents/agent-card";
@@ -20,209 +18,10 @@ import {
   List,
   ArrowUpDown,
   Plus,
-  Download,
-  X,
-  Check,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { languagesLabel } from "@/lib/languages";
 import { CreateAgentModal } from "@/components/agents/create-agent-modal";
-import type { RetellAgent } from "@/types/retell";
-
-function getVoiceLabel(agent: RetellAgent): string {
-  const vid = agent.voice_id || "";
-  return vid.replace(/^(11labs|cartesia|retell|fish_audio|minimax|openai|inworld)-/i, "");
-}
-
-function ImportModal({
-  locationId,
-  onClose,
-}: {
-  locationId: string;
-  onClose: () => void;
-}) {
-  const { data: available, isLoading } = useAvailableAgents(locationId, true);
-  const importAgents = useImportAgents(locationId);
-  const { toast } = useToast();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
-
-  const filtered = useMemo(() => {
-    if (!available) return [];
-    if (!search) return available;
-    return available.filter(
-      (a) =>
-        (a.agent_name || "").toLowerCase().includes(search.toLowerCase()) ||
-        a.agent_id.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [available, search]);
-
-  const toggleSelect = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const selectAll = () => {
-    if (!filtered) return;
-    if (selected.size === filtered.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(filtered.map((a) => a.agent_id)));
-    }
-  };
-
-  const handleImport = async () => {
-    if (selected.size === 0) return;
-    try {
-      const result = await importAgents.mutateAsync([...selected]);
-      toast(`Imported ${result.imported} agent${result.imported !== 1 ? "s" : ""}`, "success");
-      onClose();
-    } catch {
-      toast("Failed to import agents", "error");
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col mx-4 animate-slide-up">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">Import Agents</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Select agents from your Retell account to add to this location
-            </p>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-            <X className="w-4 h-4 text-gray-500" />
-          </button>
-        </div>
-
-        <div className="px-6 py-3 border-b border-gray-100">
-          <SearchInput
-            placeholder="Search available agents..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-3 min-h-0">
-          {isLoading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-              <span className="ml-3 text-sm text-gray-500">Loading agents...</span>
-            </div>
-          )}
-
-          {!isLoading && filtered.length === 0 && (
-            <div className="py-12 text-center">
-              <p className="text-sm text-gray-500">
-                {search
-                  ? "No matching agents found"
-                  : "No unassigned agents available"}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                All agents are already assigned to a location
-              </p>
-            </div>
-          )}
-
-          {!isLoading && filtered.length > 0 && (
-            <>
-              <div className="flex items-center justify-between mb-3">
-                <button
-                  onClick={selectAll}
-                  className="text-xs text-brand-600 hover:text-brand-700 font-medium"
-                >
-                  {selected.size === filtered.length ? "Deselect all" : "Select all"}
-                </button>
-                <span className="text-xs text-gray-400">
-                  {filtered.length} available
-                </span>
-              </div>
-              <div className="space-y-2">
-                {filtered.map((agent) => (
-                  <button
-                    key={agent.agent_id}
-                    onClick={() => toggleSelect(agent.agent_id)}
-                    className={cn(
-                      "w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-150 text-left",
-                      selected.has(agent.agent_id)
-                        ? "border-brand-400 bg-brand-50/50 ring-1 ring-brand-500/20 shadow-sm"
-                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all duration-150",
-                        selected.has(agent.agent_id)
-                          ? "bg-brand-500 border-brand-500"
-                          : "border-gray-300"
-                      )}
-                    >
-                      {selected.has(agent.agent_id) && (
-                        <Check className="w-3 h-3 text-white" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 truncate">
-                        {agent.agent_name || "Unnamed Agent"}
-                      </div>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-xs text-gray-400 font-mono">
-                          {agent.agent_id.slice(0, 16)}...
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {agent.channel === "chat"
-                            ? "Text agent"
-                            : agent.voice_id
-                              ? `Voice: ${getVoiceLabel(agent)}`
-                              : "Voice agent"}
-                        </span>
-                        {agent.language && (
-                          <span className="text-xs text-gray-500">
-                            {languagesLabel(agent.language)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {agent.is_published !== undefined && (
-                      <Badge variant={agent.is_published ? "success" : "warning"}>
-                        {agent.is_published ? "Published" : "Draft"}
-                      </Badge>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl">
-          <span className="text-xs text-gray-500">
-            {selected.size} agent{selected.size !== 1 ? "s" : ""} selected
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button
-              onClick={handleImport}
-              disabled={selected.size === 0}
-              loading={importAgents.isPending}
-              icon={Download}
-            >
-              Import Selected
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function AgentsPage() {
   const { locationId } = useLocation();
@@ -233,7 +32,6 @@ export default function AgentsPage() {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "modified">("modified");
-  const [showImport, setShowImport] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
   const filteredAgents = useMemo(() => {
@@ -275,18 +73,9 @@ export default function AgentsPage() {
         description="Manage your AI voice agents"
         className="mb-6"
         actions={
-          <>
-            <Button
-              variant="secondary"
-              icon={Download}
-              onClick={() => setShowImport(true)}
-            >
-              Import Agents
-            </Button>
-            <Button icon={Plus} onClick={() => setShowCreate(true)}>
-              Create Agent
-            </Button>
-          </>
+          <Button icon={Plus} onClick={() => setShowCreate(true)}>
+            Create Agent
+          </Button>
         }
       />
 
@@ -360,10 +149,10 @@ export default function AgentsPage() {
             description={
               search
                 ? "Try a different search term"
-                : "Import existing agents or create a new one"
+                : "Create a new agent to get started"
             }
-            actionLabel={search ? undefined : "Import Agents"}
-            onAction={search ? undefined : () => setShowImport(true)}
+            actionLabel={search ? undefined : "Create Agent"}
+            onAction={search ? undefined : () => setShowCreate(true)}
           />
         )}
 
@@ -401,12 +190,6 @@ export default function AgentsPage() {
         <CreateAgentModal locationId={locationId} onClose={() => setShowCreate(false)} />
       )}
 
-      {showImport && (
-        <ImportModal
-          locationId={locationId}
-          onClose={() => setShowImport(false)}
-        />
-      )}
     </div>
   );
 }

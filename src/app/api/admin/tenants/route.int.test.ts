@@ -5,6 +5,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     adminUser: { findUnique: vi.fn() },
     tenant: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn() },
+    location: { upsert: vi.fn().mockResolvedValue({}) },
     auditLog: { create: vi.fn() },
   },
 }));

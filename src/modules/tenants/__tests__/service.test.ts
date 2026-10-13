@@ -10,6 +10,8 @@ vi.mock("@/lib/prisma", () => ({
     },
     location: {
       findUnique: vi.fn(),
+      upsert: vi.fn().mockResolvedValue({}),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
   },
 }));

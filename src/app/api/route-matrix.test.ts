@@ -31,8 +31,6 @@ const UNTESTED = new Set([
   "retell/knowledge-base/[kbId]/route.ts",
   "retell/knowledge-base/[kbId]/sources/[sourceId]/route.ts",
   "retell/knowledge-base/[kbId]/sources/route.ts",
-  "retell/knowledge-base/available/route.ts",
-  "retell/knowledge-base/import/route.ts",
   "retell/voices/preview/route.ts",
   "retell/voices/route.ts",
 ]);

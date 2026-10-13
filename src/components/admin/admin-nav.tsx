@@ -5,6 +5,7 @@ import Link from "next/link";
 
 const links = [
   { href: "/admin", label: "Tenants", exact: true },
+  { href: "/admin/library", label: "Library", exact: false },
   { href: "/admin/audit-log", label: "Audit Log", exact: false },
 ];
 

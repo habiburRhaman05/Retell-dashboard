@@ -85,36 +85,6 @@ export function useDeleteAgent(locationId: string) {
   });
 }
 
-export function useAvailableAgents(locationId: string, enabled = false) {
-  return useQuery<RetellAgent[]>({
-    queryKey: ["available-agents", locationId],
-    queryFn: () =>
-      fetchJson<RetellAgent[]>(
-        `/api/retell/agents/available?locationId=${encodeURIComponent(locationId)}`
-      ),
-    enabled: !!locationId && enabled,
-  });
-}
-
-export function useImportAgents(locationId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (agentIds: string[]) =>
-      fetchJson<{ imported: number; agentIds: string[] }>(
-        "/api/retell/agents/import",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ locationId, agentIds }),
-        }
-      ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["agents", locationId] });
-      queryClient.invalidateQueries({ queryKey: ["available-agents", locationId] });
-    },
-  });
-}
-
 export interface CreateAgentFromTemplateInput {
   name: string;
   channel?: "voice" | "text";
