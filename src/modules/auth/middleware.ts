@@ -12,10 +12,12 @@ import {
 const TENANT_COOKIE = "tenant_session";
 const ADMIN_COOKIE = "admin_session";
 
-// The dashboard runs inside a CRM iframe, so in production the tenant cookie
-// must be third-party capable (SameSite=None; Secure; Partitioned). Locally,
-// browsers drop SameSite=None without Secure, so use Lax there.
-function tenantCookieOptions() {
+// Both the tenant dashboard and the admin panel are opened inside the CRM's frame,
+// so in production their cookies must be third-party capable (SameSite=None;
+// Secure; Partitioned). Locally, browsers drop SameSite=None without Secure, so
+// use Lax there. Without SameSite protection, forged cross-site requests are
+// stopped by crossSiteWrite() below instead.
+function sessionCookieOptions(maxAge: number) {
   const prod = process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
@@ -23,7 +25,7 @@ function tenantCookieOptions() {
     sameSite: prod ? ("none" as const) : ("lax" as const),
     partitioned: prod,
     path: "/",
-    maxAge: TENANT_SESSION_TTL_SEC,
+    maxAge,
   };
 }
 
@@ -39,7 +41,7 @@ export async function setTenantSession(session: TenantSession): Promise<void> {
     },
     TENANT_SESSION_TTL_SEC
   );
-  jar.set(TENANT_COOKIE, token, tenantCookieOptions());
+  jar.set(TENANT_COOKIE, token, sessionCookieOptions(TENANT_SESSION_TTL_SEC));
 }
 
 // A browser can hold several cookies with the same name (an old one from an earlier
@@ -93,13 +95,7 @@ export async function setAdminSession(session: AdminSession): Promise<void> {
     { adminId: session.adminId, email: session.email, role: session.role },
     ADMIN_SESSION_TTL_SEC
   );
-  jar.set(ADMIN_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/",
-    maxAge: ADMIN_SESSION_TTL_SEC,
-  });
+  jar.set(ADMIN_COOKIE, token, sessionCookieOptions(ADMIN_SESSION_TTL_SEC));
 }
 
 export async function getAdminSession(): Promise<AdminSession | null> {
@@ -166,6 +162,19 @@ async function authenticateTenant(): Promise<AuthResult> {
 
 const denied = () => NextResponse.json({ error: "Access denied" }, { status: 403 });
 
+/**
+ * CSRF guard for state-changing requests. Browsers always send an Origin header
+ * on cross-site writes, so a write whose Origin is not this app is a forged
+ * request from another website riding on the user's cookie. Requests without an
+ * Origin (server-to-server, tools) are not browser CSRF and are let through.
+ */
+export function crossSiteWrite(request: NextRequest): NextResponse | null {
+  if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") return null;
+  const origin = request.headers.get("origin");
+  if (!origin || origin === request.nextUrl.origin) return null;
+  return NextResponse.json({ error: "Cross-site request blocked" }, { status: 403 });
+}
+
 /** 403 when a location id supplied by the client is not the signed-in tenant's own. */
 export function locationMismatch(session: TenantSession, locationId: unknown): NextResponse | null {
   return typeof locationId === "string" && locationId !== session.crmLocationId ? denied() : null;
@@ -176,6 +185,8 @@ export function withTenant(handler: TenantHandler): (
   context: { params: Promise<Record<string, string>> }
 ) => Promise<NextResponse> {
   return async (request, context) => {
+    const forged = crossSiteWrite(request);
+    if (forged) return forged;
     const auth = await authenticateTenant();
     if (auth.response) return auth.response;
     // Next passes params: undefined for routes with no dynamic segment.
@@ -197,6 +208,8 @@ export function withTenantRoute<Ctx = { params: Promise<Record<string, string>> 
   handler: (request: NextRequest, context: Ctx, session: TenantSession) => Promise<Response>
 ): (request: NextRequest, context: Ctx) => Promise<Response> {
   return async (request, context) => {
+    const forged = crossSiteWrite(request);
+    if (forged) return forged;
     const auth = await authenticateTenant();
     if (auth.response) return auth.response;
     const { session } = auth;
@@ -229,6 +242,8 @@ export function withAdmin(
   context: { params: Promise<Record<string, string>> }
 ) => Promise<NextResponse> {
   return async (request, context) => {
+    const forged = crossSiteWrite(request);
+    if (forged) return forged;
     const signed = await getAdminSession();
     if (!signed) {
       return NextResponse.json({ error: "Admin authentication required" }, { status: 401 });

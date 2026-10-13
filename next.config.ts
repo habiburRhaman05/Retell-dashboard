@@ -1,14 +1,18 @@
 import type { NextConfig } from "next";
 
+// The admin panel is opened from the CRM's menu, so only the CRM may frame it.
+// Add white-label CRM domains (space separated) in ADMIN_FRAME_ANCESTORS.
+const ADMIN_FRAME_ANCESTORS =
+  process.env.ADMIN_FRAME_ANCESTORS?.trim() ||
+  "https://app.gohighlevel.com https://*.gohighlevel.com https://*.leadconnectorhq.com";
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // The admin panel must never be embedded in another site (clickjacking).
         source: "/admin/:path*",
         headers: [
-          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
-          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: `frame-ancestors 'self' ${ADMIN_FRAME_ANCESTORS}` },
         ],
       },
       {

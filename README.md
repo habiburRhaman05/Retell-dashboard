@@ -9,6 +9,7 @@ Set these in `.env.local` (never commit it):
 | `DATABASE_URL` | PostgreSQL connection string |
 | `RETELL_API_KEY` | The one Retell account key used for every Retell call |
 | `RETELL_WEBHOOK_KEY` | Optional. The Retell API key that carries the webhook badge, if it differs from `RETELL_API_KEY`. Webhooks are verified with this, falling back to `RETELL_API_KEY` |
+| `ADMIN_FRAME_ANCESTORS` | Optional. Space-separated sites allowed to show the admin panel in a frame. Defaults to GoHighLevel's domains. Add your white-label CRM domain here if you use one |
 | `SESSION_SECRET` | At least 32 random characters. Signs every login cookie and tenant link. Changing it logs everyone out and invalidates all links |
 | `NEXT_PUBLIC_APP_URL` | Public address of this app, used when creating tenant links |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Used only by `scripts/seed-admin.mts` to create the first admin |

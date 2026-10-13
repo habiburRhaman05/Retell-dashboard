@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
 vi.mock("@/lib/prisma", () => ({
@@ -27,6 +27,7 @@ import {
   getAdminSession,
   getTenantSession,
   locationMismatch,
+  crossSiteWrite,
   setAdminSession,
   setTenantSession,
   withAdmin,
@@ -76,7 +77,7 @@ describe("session cookies", () => {
     await setAdminSession({ adminId: "a1", email: "admin@test.com", role: "owner" });
     const [name, value, options] = mockCookies.set.mock.calls[0];
     expect(name).toBe("admin_session");
-    expect(options).toMatchObject({ httpOnly: true, sameSite: "strict", path: "/" });
+    expect(options).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/" });
     mockCookies.get.mockReturnValue({ value });
 
     expect(await getAdminSession()).toEqual({ adminId: "a1", email: "admin@test.com", role: "owner" });
@@ -136,6 +137,69 @@ describe("session cookies", () => {
     } finally {
       process.env.SESSION_SECRET = saved;
     }
+  });
+});
+
+describe("cookie attributes", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("makes both session cookies frame-capable in production (SameSite=None; Secure; Partitioned)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    await setTenantSession({ tenantId: "t1", crmLocationId: "loc_1", tenantName: "Acme", status: "active" });
+    await setAdminSession({ adminId: "a1", email: "admin@test.com", role: "owner" });
+
+    for (const [, , options] of mockCookies.set.mock.calls) {
+      expect(options).toMatchObject({ httpOnly: true, secure: true, sameSite: "none", partitioned: true, path: "/" });
+    }
+  });
+
+  it("uses Lax and no Secure/Partitioned locally, where browsers drop SameSite=None over http", async () => {
+    await setAdminSession({ adminId: "a1", email: "admin@test.com", role: "owner" });
+    expect(mockCookies.set.mock.calls[0][2]).toMatchObject({ secure: false, sameSite: "lax", partitioned: false });
+  });
+});
+
+describe("crossSiteWrite (CSRF guard)", () => {
+  const write = (method: string, origin?: string) =>
+    req("/api/retell/agents", { method, headers: origin ? { origin } : {} });
+
+  it("never blocks reads", () => {
+    expect(crossSiteWrite(write("GET", "https://evil.example"))).toBeNull();
+    expect(crossSiteWrite(write("HEAD", "https://evil.example"))).toBeNull();
+  });
+
+  it("allows writes from this app's own origin and requests with no Origin header", () => {
+    expect(crossSiteWrite(write("POST", "http://localhost"))).toBeNull();
+    expect(crossSiteWrite(write("POST"))).toBeNull();
+  });
+
+  it("blocks writes that another website sent with the user's cookie", async () => {
+    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+      const res = crossSiteWrite(write(method, "https://evil.example"));
+      expect(res?.status).toBe(403);
+      expect(await res?.json()).toEqual({ error: "Cross-site request blocked" });
+    }
+  });
+
+  it("is enforced by every wrapper before any session lookup or handler runs", async () => {
+    signedIn();
+    const hit = vi.fn(async () => NextResponse.json({ ok: true }));
+    const evil = () => write("POST", "https://evil.example");
+
+    expect((await withTenant(hit)(evil(), { params: Promise.resolve({}) })).status).toBe(403);
+    expect((await withTenantRoute(hit)(evil(), { params: Promise.resolve({}) })).status).toBe(403);
+    mockCookies.get.mockReturnValue({ value: adminSessionToken() });
+    expect((await withAdmin(hit)(evil(), { params: Promise.resolve({}) })).status).toBe(403);
+    expect(hit).not.toHaveBeenCalled();
+    expect(findTenant).not.toHaveBeenCalled();
+    expect(findAdmin).not.toHaveBeenCalled();
+  });
+
+  it("lets a same-origin write through the wrappers", async () => {
+    signedIn();
+    const hit = vi.fn(async () => NextResponse.json({ ok: true }));
+    const res = await withTenantRoute(hit)(write("POST", "http://localhost"), { params: Promise.resolve({}) });
+    expect(res.status).toBe(200);
   });
 });
 
