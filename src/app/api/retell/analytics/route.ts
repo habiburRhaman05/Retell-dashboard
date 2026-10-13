@@ -287,7 +287,11 @@ export async function GET(request: NextRequest) {
     // voice/model directly) can be attributed for the voice/model breakdown.
     const agentMeta = new Map<string, AgentMeta>();
     try {
-      const allAgents = await retell.listAgents();
+      const allAgents = await retell.hydrateAgents(
+        (await retell.listAllAgents()).filter(
+          (a) => agentIds.has(a.agent_id) && a.channel === "voice"
+        )
+      );
       const llmIdsNeeded = new Set<string>();
       for (const agent of allAgents) {
         if (!agentIds.has(agent.agent_id)) continue;

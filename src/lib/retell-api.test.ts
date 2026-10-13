@@ -7,8 +7,9 @@ import {
   deleteTestChatAgents,
   getAnyAgent,
   getOrCreateTestChatAgent,
+  hydrateAgents,
   isHiddenTestChatAgent,
-  listAgents,
+  listAgentSummaries,
   listAllAgents,
   listTestRuns,
   updateAnyAgent,
@@ -67,24 +68,25 @@ describe("RetellApiError", () => {
 
 describe("request layer", () => {
   it("sends the API key and JSON content type", async () => {
-    reply("/list-agents", []);
-    await listAgents();
+    reply("/v2/list-agents", { items: [], has_more: false });
+    await listAllAgents();
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://api.retellai.com/list-agents");
+    expect(url).toBe("https://api.retellai.com/v2/list-agents?limit=1000");
+    expect(init.method).toBe("POST");
     expect(init.headers.Authorization).toBe("Bearer key_test_123");
     expect(init.headers["Content-Type"]).toBe("application/json");
   });
 
   it("refuses to call Retell without an API key", async () => {
     delete process.env.RETELL_API_KEY;
-    await expect(listAgents()).rejects.toThrow(/RETELL_API_KEY/);
+    await expect(listAllAgents()).rejects.toThrow(/RETELL_API_KEY/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("throws RetellApiError with Retell's message on a failure status", async () => {
-    reply("/list-agents", { message: "Rate limited" }, 429);
-    const err = await listAgents().catch((e) => e);
+    reply("/v2/list-agents", { message: "Rate limited" }, 429);
+    const err = await listAllAgents().catch((e) => e);
     expect(err).toBeInstanceOf(RetellApiError);
     expect(err.status).toBe(429);
     expect(err.message).toBe("Rate limited");
@@ -109,7 +111,7 @@ describe("request layer", () => {
 
   it("treats an empty error body as a generic failure message", async () => {
     fetchMock.mockResolvedValue(new Response("", { status: 502 }));
-    const err = await listAgents().catch((e) => e);
+    const err = await listAllAgents().catch((e) => e);
     expect(err.message).toBe("Retell request failed (502)");
   });
 });
@@ -196,37 +198,148 @@ describe("channel fallback (voice vs chat endpoints)", () => {
   });
 });
 
-describe("listAllAgents", () => {
-  it("merges voice and chat agents, keeping only the newest version", async () => {
-    fetchMock.mockImplementation(async (url: string) => {
-      if (String(url).includes("/list-chat-agents")) {
-        return jsonResponse(200, [
-          { agent_id: "chat_only", channel: "chat", version: 1 },
-          { agent_id: "dup", channel: "chat", version: 3 },
-        ]);
-      }
-      return jsonResponse(200, [
-        { agent_id: "voice_only", channel: "voice", version: 2 },
-        { agent_id: "dup", channel: "voice", version: 5 },
-      ]);
+describe("listAllAgents / listAgentSummaries", () => {
+  it("maps Retell's v2 items to summaries for voice and chat agents in one call", async () => {
+    reply("/v2/list-agents", {
+      items: [
+        { agent_id: "v1", agent_name: "Reception", channel: "voice", user_modified_timestamp: 111, tags: {} },
+        { agent_id: "c1", agent_name: "Chat bot", channel: "chat", user_modified_timestamp: 222, tags: {} },
+      ],
+      has_more: false,
     });
 
     const agents = await listAllAgents();
-    const byId = Object.fromEntries(agents.map((a) => [a.agent_id, a]));
 
-    expect(Object.keys(byId).sort()).toEqual(["chat_only", "dup", "voice_only"]);
-    expect(byId.dup.version).toBe(5);
+    expect(agents).toEqual([
+      { agent_id: "v1", agent_name: "Reception", channel: "voice", last_modification_timestamp: 111 },
+      { agent_id: "c1", agent_name: "Chat bot", channel: "chat", last_modification_timestamp: 222 },
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({});
   });
 
-  it("does not swallow a chat listing failure (would orphan mappings)", async () => {
+  it("sends the channel filter and never the removed legacy endpoints", async () => {
+    reply("/v2/list-agents", { items: [], has_more: false });
+
+    await listAgentSummaries("chat");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).not.toMatch(/\/list-agents$|\/list-chat-agents/);
+    expect(JSON.parse(init.body)).toEqual({
+      filter_criteria: { channel: { type: "string", op: "eq", value: "chat" } },
+    });
+  });
+
+  it("follows pagination_key until has_more is false", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          items: [{ agent_id: "a1", agent_name: "A1", channel: "voice", user_modified_timestamp: 1 }],
+          has_more: true,
+          pagination_key: "page2",
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          items: [{ agent_id: "a2", agent_name: "A2", channel: "voice", user_modified_timestamp: 2 }],
+          has_more: false,
+        })
+      );
+
+    const agents = await listAllAgents();
+
+    expect(agents.map((a) => a.agent_id)).toEqual(["a1", "a2"]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0][0])).not.toContain("pagination_key");
+    expect(String(fetchMock.mock.calls[1][0])).toContain("pagination_key=page2");
+  });
+
+  it("returns [] when Retell sends no items", async () => {
+    reply("/v2/list-agents", { has_more: false });
+    expect(await listAllAgents()).toEqual([]);
+  });
+
+  it("does not swallow a failure on a later page (would orphan mappings)", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          items: [{ agent_id: "a1", channel: "voice", user_modified_timestamp: 1 }],
+          has_more: true,
+          pagination_key: "page2",
+        })
+      )
+      .mockResolvedValueOnce(jsonResponse(500, { message: "page two broke" }));
+
+    await expect(listAllAgents()).rejects.toThrow("page two broke");
+  });
+
+  it("fails instead of truncating when pagination never ends", async () => {
+    fetchMock.mockImplementation(async () =>
+      jsonResponse(200, { items: [], has_more: true, pagination_key: "again" })
+    );
+
+    await expect(listAllAgents()).rejects.toThrow(/too many pages/);
+    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(50);
+  });
+});
+
+describe("hydrateAgents", () => {
+  const summary = (id: string, channel: "voice" | "chat") => ({
+    agent_id: id,
+    agent_name: id,
+    channel,
+    last_modification_timestamp: 1,
+  });
+
+  it("fetches full settings per agent, using the endpoint for its channel, and keeps the order", async () => {
     fetchMock.mockImplementation(async (url: string) => {
-      if (String(url).includes("/list-chat-agents")) {
-        return jsonResponse(500, { message: "chat list broke" });
-      }
-      return jsonResponse(200, [{ agent_id: "v1", channel: "voice", version: 1 }]);
+      const u = String(url);
+      if (u.includes("/get-agent/v1")) return jsonResponse(200, { agent_id: "v1", voice_id: "voice_x", language: "en-US" });
+      // chat agents may not carry a channel field; it must come from the list
+      if (u.includes("/get-chat-agent/c1")) return jsonResponse(200, { agent_id: "c1", language: "es-ES" });
+      return jsonResponse(404, { message: u });
     });
 
-    await expect(listAllAgents()).rejects.toThrow("chat list broke");
+    const full = await hydrateAgents([summary("v1", "voice"), summary("c1", "chat")]);
+
+    expect(full.map((a) => a.agent_id)).toEqual(["v1", "c1"]);
+    expect(full[0]).toMatchObject({ voice_id: "voice_x", channel: "voice" });
+    expect(full[1]).toMatchObject({ language: "es-ES", channel: "chat" });
+  });
+
+  it("makes no request for an empty list", async () => {
+    expect(await hydrateAgents([])).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("never runs more than a handful of requests at once", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    fetchMock.mockImplementation(async (url: string) => {
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+      return jsonResponse(200, { agent_id: String(url).split("/").pop() });
+    });
+
+    const many = Array.from({ length: 20 }, (_, i) => summary(`a${i}`, "voice"));
+    const full = await hydrateAgents(many);
+
+    expect(full).toHaveLength(20);
+    expect(peak).toBeLessThanOrEqual(5);
+  });
+
+  it("rejects and stops starting new requests when one agent fails", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("/get-agent/a0")) return jsonResponse(500, { message: "agent broke" });
+      await new Promise((r) => setTimeout(r, 5));
+      return jsonResponse(200, { agent_id: "ok" });
+    });
+
+    const many = Array.from({ length: 40 }, (_, i) => summary(`a${i}`, "voice"));
+    await expect(hydrateAgents(many)).rejects.toThrow("agent broke");
+    expect(fetchMock.mock.calls.length).toBeLessThan(40);
   });
 });
 
@@ -239,6 +352,13 @@ describe("isHiddenTestChatAgent", () => {
     expect(isHiddenTestChatAgent({})).toBe(false);
   });
 });
+
+/** What POST /v2/list-agents answers for the chat channel: summaries only. */
+const chatListPage = (items: { agent_id: string; agent_name: string }[]) =>
+  jsonResponse(200, {
+    items: items.map((i) => ({ ...i, channel: "chat", user_modified_timestamp: 1, tags: {} })),
+    has_more: false,
+  });
 
 describe("getOrCreateTestChatAgent", () => {
   const voiceAgent = {
@@ -253,7 +373,7 @@ describe("getOrCreateTestChatAgent", () => {
     fetchMock.mockImplementation(async (url: string) => {
       const u = String(url);
       if (u.includes("/get-agent/")) return jsonResponse(200, voiceAgent);
-      if (u.includes("/list-chat-agents")) return jsonResponse(200, []);
+      if (u.includes("/v2/list-agents")) return chatListPage([]);
       if (u.includes("/create-chat-agent")) return jsonResponse(200, { agent_id: "chat_new" });
       return jsonResponse(404, { message: u });
     });
@@ -272,15 +392,16 @@ describe("getOrCreateTestChatAgent", () => {
     fetchMock.mockImplementation(async (url: string) => {
       const u = String(url);
       if (u.includes("/get-agent/")) return jsonResponse(200, voiceAgent);
-      if (u.includes("/list-chat-agents")) {
-        return jsonResponse(200, [
-          {
-            agent_id: "chat_old",
-            agent_name: "Reception [test-chat:agent_voice]",
-            language: "es-ES",
-            response_engine: { type: "retell-llm", llm_id: "llm_1", version: 4 },
-          },
-        ]);
+      if (u.includes("/v2/list-agents")) {
+        return chatListPage([{ agent_id: "chat_old", agent_name: "Reception [test-chat:agent_voice]" }]);
+      }
+      if (u.includes("/get-chat-agent/chat_old")) {
+        return jsonResponse(200, {
+          agent_id: "chat_old",
+          agent_name: "Reception [test-chat:agent_voice]",
+          language: "es-ES",
+          response_engine: { type: "retell-llm", llm_id: "llm_1", version: 4 },
+        });
       }
       return jsonResponse(404, { message: u });
     });
@@ -294,15 +415,16 @@ describe("getOrCreateTestChatAgent", () => {
     fetchMock.mockImplementation(async (url: string) => {
       const u = String(url);
       if (u.includes("/get-agent/")) return jsonResponse(200, voiceAgent);
-      if (u.includes("/list-chat-agents")) {
-        return jsonResponse(200, [
-          {
-            agent_id: "chat_old",
-            agent_name: "Reception [test-chat:agent_voice]",
-            language: "es-ES",
-            response_engine: { type: "retell-llm", llm_id: "llm_OUTDATED", version: 1 },
-          },
-        ]);
+      if (u.includes("/v2/list-agents")) {
+        return chatListPage([{ agent_id: "chat_old", agent_name: "Reception [test-chat:agent_voice]" }]);
+      }
+      if (u.includes("/get-chat-agent/chat_old")) {
+        return jsonResponse(200, {
+          agent_id: "chat_old",
+          agent_name: "Reception [test-chat:agent_voice]",
+          language: "es-ES",
+          response_engine: { type: "retell-llm", llm_id: "llm_OUTDATED", version: 1 },
+        });
       }
       if (u.includes("/update-chat-agent")) return jsonResponse(200, { agent_id: "chat_old" });
       return jsonResponse(404, { message: u });
@@ -318,15 +440,16 @@ describe("getOrCreateTestChatAgent", () => {
     fetchMock.mockImplementation(async (url: string) => {
       const u = String(url);
       if (u.includes("/get-agent/")) return jsonResponse(200, voiceAgent);
-      if (u.includes("/list-chat-agents")) {
-        return jsonResponse(200, [
-          {
-            agent_id: "chat_old",
-            agent_name: "Reception [test-chat:agent_voice]",
-            language: "en-US",
-            response_engine: { type: "retell-llm", llm_id: "llm_1", version: 4 },
-          },
-        ]);
+      if (u.includes("/v2/list-agents")) {
+        return chatListPage([{ agent_id: "chat_old", agent_name: "Reception [test-chat:agent_voice]" }]);
+      }
+      if (u.includes("/get-chat-agent/chat_old")) {
+        return jsonResponse(200, {
+          agent_id: "chat_old",
+          agent_name: "Reception [test-chat:agent_voice]",
+          language: "en-US",
+          response_engine: { type: "retell-llm", llm_id: "llm_1", version: 4 },
+        });
       }
       if (u.includes("/update-chat-agent")) return jsonResponse(200, { agent_id: "chat_old" });
       return jsonResponse(404, { message: u });
@@ -354,16 +477,16 @@ describe("getOrCreateTestChatAgent", () => {
     fetchMock.mockImplementation(async (url: string) => {
       const u = String(url);
       if (u.includes("/get-agent/")) return jsonResponse(200, voiceAgent);
-      if (u.includes("/list-chat-agents")) {
-        return jsonResponse(200, [
-          { agent_id: "other", agent_name: "X [test-chat:agent_SOMEONE_ELSE]" },
-        ]);
+      if (u.includes("/v2/list-agents")) {
+        return chatListPage([{ agent_id: "other", agent_name: "X [test-chat:agent_SOMEONE_ELSE]" }]);
       }
       if (u.includes("/create-chat-agent")) return jsonResponse(200, { agent_id: "chat_new" });
       return jsonResponse(404, { message: u });
     });
 
     expect(await getOrCreateTestChatAgent("agent_voice")).toBe("chat_new");
+    // nothing matched, so there is no agent to fetch details for
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes("/get-chat-agent/"))).toBe(false);
   });
 });
 
@@ -371,8 +494,8 @@ describe("deleteTestChatAgents", () => {
   it("deletes every matching test chat agent and survives individual failures", async () => {
     fetchMock.mockImplementation(async (url: string) => {
       const u = String(url);
-      if (u.includes("/list-chat-agents")) {
-        return jsonResponse(200, [
+      if (u.includes("/v2/list-agents")) {
+        return chatListPage([
           { agent_id: "chat_a", agent_name: "A [test-chat:agent_v1]" },
           { agent_id: "chat_b", agent_name: "B [test-chat:agent_v1]" },
           { agent_id: "chat_other", agent_name: "C [test-chat:agent_OTHER]" },
@@ -396,7 +519,7 @@ describe("deleteTestChatAgents", () => {
   });
 
   it("does nothing when no test chat agent exists", async () => {
-    reply("/list-chat-agents", []);
+    reply("/v2/list-agents", { items: [], has_more: false });
     await deleteTestChatAgents("agent_v1");
     expect(fetchMock.mock.calls.filter(([u]) => String(u).includes("/delete-chat-agent/"))).toHaveLength(0);
   });

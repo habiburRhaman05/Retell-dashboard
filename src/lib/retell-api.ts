@@ -66,8 +66,96 @@ async function retellFetch<T>(
   return res.json();
 }
 
-export async function listAgents(): Promise<RetellAgent[]> {
-  return retellFetch<RetellAgent[]>("/list-agents");
+// ---- Agent lists -------------------------------------------------------------
+// Retell retired GET /list-agents and GET /list-chat-agents. POST /v2/list-agents
+// returns one paginated list of lightweight summaries for voice and chat agents;
+// full settings need a get-agent / get-chat-agent call (see hydrateAgents).
+
+export interface AgentSummary {
+  agent_id: string;
+  agent_name: string | null;
+  channel: "voice" | "chat";
+  last_modification_timestamp: number;
+}
+
+interface AgentListPage {
+  items?: {
+    agent_id: string;
+    agent_name?: string | null;
+    channel: "voice" | "chat";
+    user_modified_timestamp?: number;
+  }[];
+  has_more?: boolean;
+  pagination_key?: string;
+}
+
+const AGENT_LIST_PAGE_SIZE = 1000;
+const AGENT_LIST_MAX_PAGES = 50;
+const AGENT_DETAIL_CONCURRENCY = 5;
+
+/** Every agent (or every agent of one channel), following Retell's pagination. */
+export async function listAgentSummaries(channel?: "voice" | "chat"): Promise<AgentSummary[]> {
+  const body = channel
+    ? { filter_criteria: { channel: { type: "string", op: "eq", value: channel } } }
+    : {};
+  const agents: AgentSummary[] = [];
+  let paginationKey: string | undefined;
+
+  for (let page = 0; page < AGENT_LIST_MAX_PAGES; page++) {
+    const params = new URLSearchParams({ limit: String(AGENT_LIST_PAGE_SIZE) });
+    if (paginationKey) params.set("pagination_key", paginationKey);
+
+    const res = await retellFetch<AgentListPage>(`/v2/list-agents?${params.toString()}`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+
+    for (const item of res.items ?? []) {
+      agents.push({
+        agent_id: item.agent_id,
+        agent_name: item.agent_name ?? null,
+        channel: item.channel,
+        last_modification_timestamp: item.user_modified_timestamp ?? 0,
+      });
+    }
+
+    if (!res.has_more || !res.pagination_key) return agents;
+    paginationKey = res.pagination_key;
+  }
+  // A silently truncated list would make callers think agents were deleted.
+  throw new Error("Retell agent list has too many pages");
+}
+
+/**
+ * Full settings for the given agents, fetched a few at a time. Only pass the
+ * agents you actually need (e.g. one location's), never the whole account.
+ */
+export async function hydrateAgents(agents: AgentSummary[]): Promise<RetellAgent[]> {
+  const out: RetellAgent[] = new Array(agents.length);
+  let next = 0;
+  let failed = false;
+
+  async function worker() {
+    while (!failed && next < agents.length) {
+      const i = next++;
+      const s = agents[i];
+      try {
+        const full =
+          s.channel === "chat"
+            ? await retellFetch<RetellAgent>(`/get-chat-agent/${s.agent_id}`)
+            : await getAgent(s.agent_id);
+        out[i] = { ...full, channel: s.channel };
+      } catch (e) {
+        failed = true;
+        throw e;
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(AGENT_DETAIL_CONCURRENCY, agents.length) }, worker)
+  );
+  return out;
 }
 
 export async function getAgent(
@@ -345,11 +433,13 @@ interface ChatAgentSummary {
 
 // Chat agents do not keep assigned_tags, so the voice agent id lives in the name.
 const testChatSuffix = (voiceAgentId: string) => ` [test-chat:${voiceAgentId}]`;
-const isTestChatFor = (a: ChatAgentSummary, voiceAgentId: string) =>
+const isTestChatFor = (a: { agent_name?: string | null }, voiceAgentId: string) =>
   !!a.agent_name?.endsWith(testChatSuffix(voiceAgentId));
 
-export async function listChatAgents(): Promise<ChatAgentSummary[]> {
-  return retellFetch<ChatAgentSummary[]>("/list-chat-agents");
+async function findTestChatAgent(voiceAgentId: string): Promise<ChatAgentSummary | undefined> {
+  const hit = (await listAgentSummaries("chat")).find((a) => isTestChatFor(a, voiceAgentId));
+  if (!hit) return undefined;
+  return retellFetch<ChatAgentSummary>(`/get-chat-agent/${hit.agent_id}`);
 }
 
 export async function getOrCreateTestChatAgent(voiceAgentId: string): Promise<string> {
@@ -359,7 +449,7 @@ export async function getOrCreateTestChatAgent(voiceAgentId: string): Promise<st
     throw new Error("Text chat is only available for Retell LLM and conversational flow agents");
   }
 
-  const existing = (await listChatAgents()).find((a) => isTestChatFor(a, voiceAgentId));
+  const existing = await findTestChatAgent(voiceAgentId);
 
   if (existing) {
     const same =
@@ -396,7 +486,7 @@ export async function getOrCreateTestChatAgent(voiceAgentId: string): Promise<st
 
 /** Best effort: removes the hidden test chat agent when its voice agent is deleted. */
 export async function deleteTestChatAgents(voiceAgentId: string): Promise<void> {
-  const matches = (await listChatAgents()).filter((a) => isTestChatFor(a, voiceAgentId));
+  const matches = (await listAgentSummaries("chat")).filter((a) => isTestChatFor(a, voiceAgentId));
   await Promise.allSettled(
     matches.map((a) => retellFetch<void>(`/delete-chat-agent/${a.agent_id}`, { method: "DELETE" }))
   );
@@ -475,22 +565,13 @@ export async function updateConversationFlow(
   });
 }
 
-/** Voice agents and text (chat) agents, which Retell lists separately. */
-export async function listAllAgents(): Promise<RetellAgent[]> {
-  const [voice, chat] = await Promise.all([
-    listAgents(),
-    // Must not swallow errors: callers delete mappings for agents missing from
-    // this list, so a failed chat listing would wrongly orphan every text agent.
-    retellFetch<RetellAgent[]>("/list-chat-agents"),
-  ]);
-  // Retell returns every version of an agent as its own row. Keep the newest
-  // one, so names and settings are the current ones.
-  const latest = new Map<string, RetellAgent>();
-  for (const a of [...voice, ...chat]) {
-    const cur = latest.get(a.agent_id);
-    if (!cur || (a.version ?? 0) > (cur.version ?? 0)) latest.set(a.agent_id, a);
-  }
-  return [...latest.values()];
+/**
+ * Voice and text (chat) agents, one summary each. Must not swallow errors:
+ * callers delete mappings for agents missing from this list, so a failed
+ * listing would wrongly orphan agents.
+ */
+export async function listAllAgents(): Promise<AgentSummary[]> {
+  return listAgentSummaries();
 }
 
 // ---- AI simulated chats (Retell test cases + batch tests) -------------------

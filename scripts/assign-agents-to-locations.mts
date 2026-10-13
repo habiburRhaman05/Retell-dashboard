@@ -20,10 +20,26 @@ const apiKey = get("RETELL_API_KEY");
 if (!apiKey) throw new Error("RETELL_API_KEY is missing in .env.local");
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? get("DATABASE_URL");
 
-async function retell(path: string) {
-  const res = await fetch(`https://api.retellai.com${path}`, { headers: { Authorization: `Bearer ${apiKey}` } });
-  if (!res.ok) throw new Error(`Retell ${path} failed: ${res.status} ${await res.text()}`);
-  return res.json();
+// POST /v2/list-agents: one summary per agent (voice and chat), paginated.
+async function listAllAgents(): Promise<{ agent_id: string; agent_name?: string | null }[]> {
+  const agents: { agent_id: string; agent_name?: string | null }[] = [];
+  let key: string | undefined;
+  for (let page = 0; page < 50; page++) {
+    const params = new URLSearchParams({ limit: "1000" });
+    if (key) params.set("pagination_key", key);
+    const path = `/v2/list-agents?${params}`;
+    const res = await fetch(`https://api.retellai.com${path}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (!res.ok) throw new Error(`Retell ${path} failed: ${res.status} ${await res.text()}`);
+    const data = await res.json();
+    agents.push(...(data.items ?? []));
+    if (!data.has_more || !data.pagination_key) return agents;
+    key = data.pagination_key;
+  }
+  throw new Error("Retell agent list has too many pages");
 }
 
 const prisma = new PrismaClient();
@@ -41,15 +57,9 @@ try {
   const dupes = findDuplicateLocationNames(locations);
   if (dupes.length) console.log("\nWARNING: locations with the same name, matches to them will be flagged:", dupes);
 
-  // list-agents returns every version as its own row; keep the newest of each agent.
-  const [voice, chat] = await Promise.all([retell("/list-agents"), retell("/list-chat-agents")]);
-  const latest = new Map<string, any>();
-  for (const a of [...voice, ...chat]) {
-    const cur = latest.get(a.agent_id);
-    if (!cur || (a.version ?? 0) > (cur.version ?? 0)) latest.set(a.agent_id, a);
-  }
-  const agents = [...latest.values()].filter((a) => !/\[test-chat:agent_[^\]]+\]$/.test(a.agent_name ?? ""));
-  console.log(`\nAgents in Retell: ${agents.length} (from ${voice.length + chat.length} rows)`);
+  const all = await listAllAgents();
+  const agents = all.filter((a) => !/\[test-chat:agent_[^\]]+\]$/.test(a.agent_name ?? ""));
+  console.log(`\nAgents in Retell: ${agents.length} (from ${all.length} listed)`);
 
   const toInsert: { locationId: string; retellAgentId: string; agentName: string | null }[] = [];
   const counts = new Map<string, number>();

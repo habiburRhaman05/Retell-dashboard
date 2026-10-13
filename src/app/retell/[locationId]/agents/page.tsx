@@ -178,16 +178,24 @@ function ImportModal({
                           {agent.agent_id.slice(0, 16)}...
                         </span>
                         <span className="text-xs text-gray-500">
-                          {agent.channel === "chat" ? "Text agent" : `Voice: ${getVoiceLabel(agent)}`}
+                          {agent.channel === "chat"
+                            ? "Text agent"
+                            : agent.voice_id
+                              ? `Voice: ${getVoiceLabel(agent)}`
+                              : "Voice agent"}
                         </span>
-                        <span className="text-xs text-gray-500">
-                          {languagesLabel(agent.language)}
-                        </span>
+                        {agent.language && (
+                          <span className="text-xs text-gray-500">
+                            {languagesLabel(agent.language)}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <Badge variant={agent.is_published ? "success" : "warning"}>
-                      {agent.is_published ? "Published" : "Draft"}
-                    </Badge>
+                    {agent.is_published !== undefined && (
+                      <Badge variant={agent.is_published ? "success" : "warning"}>
+                        {agent.is_published ? "Published" : "Draft"}
+                      </Badge>
+                    )}
                   </button>
                 ))}
               </div>

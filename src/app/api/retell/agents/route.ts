@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(locationAgents);
+    return NextResponse.json(await retell.hydrateAgents(locationAgents));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to list agents";

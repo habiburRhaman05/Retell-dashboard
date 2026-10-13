@@ -20,6 +20,7 @@ vi.mock("@/lib/retell-api", async (importOriginal) => {
   return {
     ...actual,
     listAllAgents: vi.fn(),
+    hydrateAgents: vi.fn(),
     createAgent: vi.fn(),
   };
 });
@@ -33,6 +34,7 @@ const deleteMany = vi.mocked(prisma.locationAgent.deleteMany);
 const createMapping = vi.mocked(prisma.locationAgent.create);
 const upsertLocation = vi.mocked(prisma.location.upsert);
 const listAllAgents = vi.mocked(retell.listAllAgents);
+const hydrateAgents = vi.mocked(retell.hydrateAgents);
 const createAgent = vi.mocked(retell.createAgent);
 
 const voice = (id: string, name: string, extra: Record<string, unknown> = {}) => ({
@@ -57,6 +59,8 @@ function postRequest(body: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // the real hydrateAgents would call Retell; here it just echoes what it is given
+  hydrateAgents.mockImplementation(async (list) => list as never);
   upsertLocation.mockResolvedValue({} as never);
   createMapping.mockResolvedValue({} as never);
   // no tenant owns this location in tests, so no limit policy applies
@@ -100,6 +104,45 @@ describe("GET /api/retell/agents", () => {
     const body = await res.json();
 
     expect(body.map((a: { agent_id: string }) => a.agent_id)).toEqual(["a1", "a2"]);
+    expect(deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("fetches full settings only for this location's agents, never the whole account", async () => {
+    findMany.mockResolvedValue([{ retellAgentId: "a1" }] as never);
+    listAllAgents.mockResolvedValue([
+      voice("a1", "Reception"),
+      voice("a3", "Other location"),
+      voice("a4", "Another location"),
+    ] as never);
+
+    await GET(listRequest());
+
+    expect(hydrateAgents).toHaveBeenCalledTimes(1);
+    const passed = hydrateAgents.mock.calls[0][0] as { agent_id: string }[];
+    expect(passed.map((a) => a.agent_id)).toEqual(["a1"]);
+  });
+
+  it("returns the full settings the UI needs, not just the list summary", async () => {
+    findMany.mockResolvedValue([{ retellAgentId: "a1" }] as never);
+    listAllAgents.mockResolvedValue([voice("a1", "Reception")] as never);
+    hydrateAgents.mockResolvedValue([
+      voice("a1", "Reception", { voice_id: "11labs-Adrian", language: "en-US", is_published: true }),
+    ] as never);
+
+    const body = await (await GET(listRequest())).json();
+
+    expect(body[0]).toMatchObject({ voice_id: "11labs-Adrian", language: "en-US", is_published: true });
+  });
+
+  it("returns 500 and keeps every mapping when loading agent details fails", async () => {
+    findMany.mockResolvedValue([{ retellAgentId: "a1" }] as never);
+    listAllAgents.mockResolvedValue([voice("a1", "Reception")] as never);
+    hydrateAgents.mockRejectedValue(new Error("Retell is busy"));
+
+    const res = await GET(listRequest());
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Retell is busy" });
     expect(deleteMany).not.toHaveBeenCalled();
   });
 
