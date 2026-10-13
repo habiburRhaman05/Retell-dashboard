@@ -6,6 +6,7 @@ type GateState =
   | { status: "loading" }
   | { status: "authenticated"; tenantName: string }
   | { status: "not_registered" }
+  | { status: "link_required"; invalid: boolean }
   | { status: "suspended" }
   | { status: "error"; message: string };
 
@@ -22,15 +23,23 @@ export function TenantGate({
     let cancelled = false;
     async function authenticate() {
       try {
+        // The signed link from the CRM carries the proof of access.
+        const token = new URLSearchParams(window.location.search).get("token") ?? undefined;
         const res = await fetch("/api/auth/tenant", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ locationId }),
+          body: JSON.stringify({ locationId, token }),
         });
         if (cancelled) return;
 
         if (res.ok) {
           const data = await res.json();
+          if (token) {
+            // The session cookie now carries access; keep the link out of the address bar.
+            const clean = new URL(window.location.href);
+            clean.searchParams.delete("token");
+            window.history.replaceState(null, "", clean.toString());
+          }
           setState({ status: "authenticated", tenantName: data.tenantName });
           return;
         }
@@ -38,6 +47,8 @@ export function TenantGate({
         const data = await res.json().catch(() => ({ code: "UNKNOWN" }));
         if (data.code === "NOT_REGISTERED") {
           setState({ status: "not_registered" });
+        } else if (data.code === "LINK_REQUIRED" || data.code === "INVALID_LINK") {
+          setState({ status: "link_required", invalid: data.code === "INVALID_LINK" });
         } else if (data.code === "ACCOUNT_SUSPENDED") {
           setState({ status: "suspended" });
         } else {
@@ -75,6 +86,28 @@ export function TenantGate({
           </div>
           <h1 className="text-xl font-semibold text-gray-900 mb-2">Account Not Registered</h1>
           <p className="text-gray-500">This account has not been set up yet. Please contact support to get started.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.status === "link_required") {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">
+            {state.invalid ? "This Link Is Not Valid" : "Open From Your CRM"}
+          </h1>
+          <p className="text-gray-500">
+            {state.invalid
+              ? "This link has expired or was changed. Please contact support for a new one."
+              : "Please open this app from the link in your CRM menu."}
+          </p>
         </div>
       </div>
     );

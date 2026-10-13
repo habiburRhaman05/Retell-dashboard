@@ -1,8 +1,9 @@
+import { withTenantRoute } from "@/modules/auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   try {
     const body = await request.json();
     const { locationId, knowledgeBaseIds } = body as {
@@ -69,3 +70,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = withTenantRoute(handlePOST);

@@ -41,7 +41,6 @@ describe("validateEnv", () => {
     process.env.RETELL_API_KEY = "key_abc123";
     const env = validateEnv();
     expect(["development", "test", "production"]).toContain(env.NODE_ENV);
-    expect(env.RETELL_WEBHOOK_SECRET).toBe("");
     expect(env.ALLOWED_FRAME_ANCESTORS).toBe("");
   });
 

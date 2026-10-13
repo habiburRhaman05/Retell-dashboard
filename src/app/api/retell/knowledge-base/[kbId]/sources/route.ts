@@ -1,3 +1,5 @@
+import { locationMismatch, withTenantRoute } from "@/modules/auth/middleware";
+import type { TenantSession } from "@/modules/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
@@ -14,9 +16,10 @@ async function verifyOwnership(locationId: string, kbId: string) {
   return !!mapping;
 }
 
-export async function POST(
+async function handlePOST(
   request: NextRequest,
-  { params }: { params: Promise<{ kbId: string }> }
+  { params }: { params: Promise<{ kbId: string }> },
+  session: TenantSession
 ) {
   const { kbId } = await params;
 
@@ -30,6 +33,9 @@ export async function POST(
         { status: 400 }
       );
     }
+    // Multipart bodies are not inspected by the wrapper, so check the field here.
+    const mismatch = locationMismatch(session, locationId);
+    if (mismatch) return mismatch;
 
     const hasAccess = await verifyOwnership(locationId, kbId);
     if (!hasAccess) {
@@ -74,3 +80,5 @@ export async function POST(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = withTenantRoute(handlePOST);

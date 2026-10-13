@@ -69,6 +69,69 @@ describe("TenantGate", () => {
     expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
   });
 
+  it("asks for the CRM link when there is no session and no token", async () => {
+    mockFetch({ ok: false, status: 401, body: { code: "LINK_REQUIRED", error: "Open this app from your CRM link." } });
+    render(
+      <TenantGate locationId="loc_1">
+        <div>Dashboard</div>
+      </TenantGate>
+    );
+    await waitFor(() => {
+      expect(screen.getByText("Open From Your CRM")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
+  });
+
+  it("explains an invalid or expired link", async () => {
+    mockFetch({ ok: false, status: 401, body: { code: "INVALID_LINK", error: "This link is not valid." } });
+    render(
+      <TenantGate locationId="loc_1">
+        <div>Dashboard</div>
+      </TenantGate>
+    );
+    await waitFor(() => {
+      expect(screen.getByText("This Link Is Not Valid")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
+  });
+
+  it("sends the token from the URL and then removes it from the address bar", async () => {
+    window.history.pushState({}, "", "/retell/loc_1/dashboard?token=signed.link.token&keep=1");
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ ok: true, tenantName: "Acme" }),
+    } as Response);
+
+    render(
+      <TenantGate locationId="loc_1">
+        <div>Dashboard Content</div>
+      </TenantGate>
+    );
+
+    await waitFor(() => expect(screen.getByText("Dashboard Content")).toBeInTheDocument());
+    expect(JSON.parse(spy.mock.calls[0][1]!.body as string)).toEqual({
+      locationId: "loc_1",
+      token: "signed.link.token",
+    });
+    expect(window.location.search).toBe("?keep=1");
+    window.history.pushState({}, "", "/");
+  });
+
+  it("keeps the token in the URL when authentication fails", async () => {
+    window.history.pushState({}, "", "/retell/loc_1/dashboard?token=bad");
+    mockFetch({ ok: false, status: 401, body: { code: "INVALID_LINK" } });
+
+    render(
+      <TenantGate locationId="loc_1">
+        <div>Dashboard</div>
+      </TenantGate>
+    );
+
+    await waitFor(() => expect(screen.getByText("This Link Is Not Valid")).toBeInTheDocument());
+    expect(window.location.search).toBe("?token=bad");
+    window.history.pushState({}, "", "/");
+  });
+
   it("shows error message on network failure", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network error"));
     render(

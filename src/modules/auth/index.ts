@@ -8,7 +8,9 @@ export {
 
 export {
   withTenant,
+  withTenantRoute,
   withAdmin,
+  locationMismatch,
   getTenantSession,
   getAdminSession,
   setTenantSession,
@@ -18,3 +20,5 @@ export {
   type TenantHandler,
   type AdminHandler,
 } from "./middleware";
+
+export { createTenantLinkToken, verifyTenantLinkToken } from "./tokens";

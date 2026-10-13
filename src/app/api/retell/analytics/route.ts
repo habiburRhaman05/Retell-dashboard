@@ -1,3 +1,4 @@
+import { withTenantRoute } from "@/modules/auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
@@ -255,7 +256,7 @@ function aggregateVoiceAi(
   };
 }
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   const locationId = request.nextUrl.searchParams.get("locationId");
   const startParam = request.nextUrl.searchParams.get("start");
   const endParam = request.nextUrl.searchParams.get("end");
@@ -366,3 +367,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withTenantRoute(handleGET);

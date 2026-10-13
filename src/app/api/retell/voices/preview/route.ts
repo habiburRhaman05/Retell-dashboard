@@ -1,3 +1,4 @@
+import { withTenantRoute } from "@/modules/auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { getVoicesCached } from "@/lib/voices-cache";
 
@@ -11,7 +12,7 @@ const MAX_BYTES = 8 * 1024 * 1024;
  * Only the voice's own sample link is ever fetched, looked up by voice id from
  * the voice list, so this cannot be used to fetch arbitrary addresses.
  */
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   const voiceId = request.nextUrl.searchParams.get("voiceId");
   if (!voiceId) return NextResponse.json({ error: "voiceId is required" }, { status: 400 });
 
@@ -44,3 +45,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withTenantRoute(handleGET);

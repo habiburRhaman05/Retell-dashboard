@@ -1,5 +1,32 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Configuration
+
+Set these in `.env.local` (never commit it):
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `RETELL_API_KEY` | The one Retell account key. It also signs Retell webhooks, so it must be the key with the webhook badge |
+| `SESSION_SECRET` | At least 32 random characters. Signs every login cookie and tenant link. Changing it logs everyone out and invalidates all links |
+| `NEXT_PUBLIC_APP_URL` | Public address of this app, used when creating tenant links |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Used only by `scripts/seed-admin.mts` to create the first admin |
+
+Generate a secret with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`.
+
+## How tenants get in
+
+Tenants never sign in with a password. An admin opens **Admin > Tenants > (tenant) > Access** and creates a
+dashboard link, then pastes it into that tenant's CRM custom menu. The link carries a signed token for exactly
+one tenant. Knowing a location id is not enough to open a dashboard. Links last one year; suspending a tenant
+cuts access immediately.
+
+## Retell webhook
+
+Point Retell at `https://<your-domain>/api/webhooks/retell`. Requests are checked against the
+`x-retell-signature` header (`v={timestamp},d={digest}`, signed with the Retell API key) and rejected if the
+signature is wrong or older than 5 minutes.
+
 ## Getting Started
 
 First, run the development server:

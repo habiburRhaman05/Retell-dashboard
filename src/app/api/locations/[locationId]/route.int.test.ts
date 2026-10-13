@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { GET, PUT } from "@/app/api/locations/[locationId]/route";
+import { tenantSessionToken, liveTenant } from "@/test/auth";
 
 // The route talks to Postgres through the shared Prisma singleton; swap only
 // the storage layer so the handler's own logic is what gets exercised.
@@ -11,8 +12,12 @@ vi.mock("@/lib/prisma", () => ({
       findUnique: vi.fn(),
       upsert: vi.fn(),
     },
+    tenant: { findUnique: vi.fn() },
   },
 }));
+
+const jar = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
+vi.mock("next/headers", () => ({ cookies: vi.fn(() => jar) }));
 
 const mockedFindUnique = vi.mocked(prisma.location.findUnique);
 const mockedUpsert = vi.mocked(prisma.location.upsert);
@@ -29,6 +34,8 @@ function putRequest(body: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  jar.get.mockReturnValue({ value: tenantSessionToken() });
+  vi.mocked(prisma.tenant.findUnique).mockResolvedValue(liveTenant() as never);
 });
 
 describe("GET /api/locations/[locationId]", () => {
@@ -48,20 +55,20 @@ describe("GET /api/locations/[locationId]", () => {
   it("returns null when the location is unknown or unnamed", async () => {
     mockedFindUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ name: "   " } as never);
 
-    const first = await GET(new NextRequest("http://localhost/api/locations/x"), ctx("x"));
-    const second = await GET(new NextRequest("http://localhost/api/locations/x"), ctx("x"));
+    const first = await GET(new NextRequest("http://localhost/api/locations/loc_1"), ctx("loc_1"));
+    const second = await GET(new NextRequest("http://localhost/api/locations/loc_1"), ctx("loc_1"));
 
-    expect(await first.json()).toEqual({ locationId: "x", name: null });
-    expect(await second.json()).toEqual({ locationId: "x", name: null });
+    expect(await first.json()).toEqual({ locationId: "loc_1", name: null });
+    expect(await second.json()).toEqual({ locationId: "loc_1", name: null });
   });
 
   it("stays 200 with a null name when the database is unreachable", async () => {
     mockedFindUnique.mockRejectedValue(new Error("connection refused"));
 
-    const res = await GET(new NextRequest("http://localhost/api/locations/x"), ctx("x"));
+    const res = await GET(new NextRequest("http://localhost/api/locations/loc_1"), ctx("loc_1"));
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ locationId: "x", name: null });
+    expect(await res.json()).toEqual({ locationId: "loc_1", name: null });
   });
 });
 
@@ -118,5 +125,41 @@ describe("PUT /api/locations/[locationId]", () => {
 
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "unique constraint violated" });
+  });
+});
+
+describe("access control", () => {
+  const url = (id: string) => `http://localhost/api/locations/${id}`;
+
+  it("returns 401 without a session for GET and PUT, and touches nothing", async () => {
+    jar.get.mockReturnValue(undefined);
+    expect((await GET(new NextRequest(url("loc_1")), ctx("loc_1"))).status).toBe(401);
+    expect((await PUT(putRequest({ name: "Hacked" }), ctx("loc_1"))).status).toBe(401);
+    expect(mockedFindUnique).not.toHaveBeenCalled();
+    expect(mockedUpsert).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when reading another tenant's location", async () => {
+    const res = await GET(new NextRequest(url("loc_victim")), ctx("loc_victim"));
+    expect(res.status).toBe(403);
+    expect(mockedFindUnique).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 and writes nothing when renaming another tenant's location", async () => {
+    const res = await PUT(
+      new NextRequest(url("loc_victim"), {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Hacked" }),
+      }),
+      ctx("loc_victim")
+    );
+    expect(res.status).toBe(403);
+    expect(mockedUpsert).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 for a suspended tenant", async () => {
+    vi.mocked(prisma.tenant.findUnique).mockResolvedValue(liveTenant({ status: "suspended" }) as never);
+    expect((await GET(new NextRequest(url("loc_1")), ctx("loc_1"))).status).toBe(403);
   });
 });

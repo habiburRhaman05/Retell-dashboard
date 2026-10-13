@@ -1,39 +1,146 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    tenant: { findUnique: vi.fn() },
+    adminUser: { findUnique: vi.fn() },
+  },
+}));
+
 const mockCookies = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() => mockCookies),
 }));
 
-import { withTenant, withAdmin } from "../middleware";
+import { prisma } from "@/lib/prisma";
+import {
+  adminSessionToken,
+  liveAdmin,
+  liveTenant,
+  signTestToken,
+  tenantSessionToken,
+} from "@/test/auth";
+import {
+  getAdminSession,
+  getTenantSession,
+  locationMismatch,
+  setAdminSession,
+  setTenantSession,
+  withAdmin,
+  withTenant,
+  withTenantRoute,
+} from "../middleware";
 
-function tenantSession(status = "active") {
-  return Buffer.from(
-    JSON.stringify({
+const findTenant = vi.mocked(prisma.tenant.findUnique);
+const findAdmin = vi.mocked(prisma.adminUser.findUnique);
+
+const req = (path = "/api/tenant/entitlements", init?: ConstructorParameters<typeof NextRequest>[1]) =>
+  new NextRequest(`http://localhost${path}`, init);
+
+const signedIn = (token = tenantSessionToken()) => mockCookies.get.mockReturnValue({ value: token });
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  findTenant.mockResolvedValue(liveTenant() as never);
+  findAdmin.mockResolvedValue(liveAdmin() as never);
+});
+
+describe("session cookies", () => {
+  it("stores the tenant session as a signed httpOnly cookie, not readable JSON", async () => {
+    await setTenantSession({ tenantId: "t1", crmLocationId: "loc_1", tenantName: "Acme", status: "active" });
+
+    const [name, value, options] = mockCookies.set.mock.calls[0];
+    expect(name).toBe("tenant_session");
+    expect(value.split(".")).toHaveLength(3);
+    expect(value).not.toContain("loc_1");
+    expect(options).toMatchObject({ httpOnly: true, path: "/" });
+  });
+
+  it("round-trips a tenant session through the cookie", async () => {
+    await setTenantSession({ tenantId: "t1", crmLocationId: "loc_1", tenantName: "Acme", status: "active" });
+    mockCookies.get.mockReturnValue({ value: mockCookies.set.mock.calls[0][1] });
+
+    expect(await getTenantSession()).toEqual({
       tenantId: "t1",
       crmLocationId: "loc_1",
       tenantName: "Acme",
-      status,
-    })
-  ).toString("base64");
-}
+      status: "active",
+    });
+  });
 
-function adminSession(role = "owner") {
-  return Buffer.from(
-    JSON.stringify({ adminId: "a1", email: "admin@test.com", role })
-  ).toString("base64");
-}
+  it("round-trips an admin session through the cookie", async () => {
+    await setAdminSession({ adminId: "a1", email: "admin@test.com", role: "owner" });
+    const [name, value, options] = mockCookies.set.mock.calls[0];
+    expect(name).toBe("admin_session");
+    expect(options).toMatchObject({ httpOnly: true, sameSite: "strict", path: "/" });
+    mockCookies.get.mockReturnValue({ value });
 
-const req = () => new NextRequest("http://localhost/api/tenant/entitlements");
+    expect(await getAdminSession()).toEqual({ adminId: "a1", email: "admin@test.com", role: "owner" });
+  });
 
-beforeEach(() => vi.clearAllMocks());
+  it("rejects the old unsigned base64 cookie", async () => {
+    const forged = Buffer.from(
+      JSON.stringify({ adminId: "a1", email: "x@y.z", role: "owner" })
+    ).toString("base64");
+    mockCookies.get.mockReturnValue({ value: forged });
+    expect(await getAdminSession()).toBeNull();
+  });
+
+  it("rejects a cookie signed with a different secret", async () => {
+    mockCookies.get.mockReturnValue({
+      value: signTestToken(
+        "admin-session",
+        { adminId: "a1", email: "x@y.z", role: "owner" },
+        { secret: "attacker-secret-attacker-secret-attacker" }
+      ),
+    });
+    expect(await getAdminSession()).toBeNull();
+  });
+
+  it("rejects an expired cookie", async () => {
+    const longAgo = Math.floor(Date.now() / 1000) - 7200;
+    mockCookies.get.mockReturnValue({
+      value: signTestToken(
+        "tenant-session",
+        { tenantId: "t1", crmLocationId: "loc_1", tenantName: "Acme", status: "active" },
+        { nowSec: longAgo, ttlSec: 60 }
+      ),
+    });
+    expect(await getTenantSession()).toBeNull();
+  });
+
+  it("does not accept a tenant cookie as an admin session or the reverse", async () => {
+    mockCookies.get.mockReturnValue({ value: tenantSessionToken() });
+    expect(await getAdminSession()).toBeNull();
+    mockCookies.get.mockReturnValue({ value: adminSessionToken() });
+    expect(await getTenantSession()).toBeNull();
+  });
+
+  it("does not accept a dashboard link as a session", async () => {
+    mockCookies.get.mockReturnValue({
+      value: signTestToken("tenant-link", { loc: "loc_1", tenantId: "t1", crmLocationId: "loc_1" }),
+    });
+    expect(await getTenantSession()).toBeNull();
+  });
+
+  it("refuses to run without a strong SESSION_SECRET", async () => {
+    const saved = process.env.SESSION_SECRET;
+    process.env.SESSION_SECRET = "short";
+    try {
+      mockCookies.get.mockReturnValue({ value: tenantSessionToken() });
+      await expect(getTenantSession()).rejects.toThrow(/SESSION_SECRET/);
+    } finally {
+      process.env.SESSION_SECRET = saved;
+    }
+  });
+});
 
 describe("withTenant", () => {
   it("runs the handler on routes with no dynamic params", async () => {
     // Next 16 passes context.params as undefined when the route has no
     // dynamic segment; the wrapper must not dereference it.
-    mockCookies.get.mockReturnValue({ value: tenantSession() });
+    signedIn();
     const handler = withTenant(async (_request, session) =>
       NextResponse.json({ tenantId: session.tenantId })
     );
@@ -44,7 +151,7 @@ describe("withTenant", () => {
     expect(await res.json()).toEqual({ tenantId: "t1" });
   });
 
-  it("still returns 401 without a session", async () => {
+  it("returns 401 without a session", async () => {
     mockCookies.get.mockReturnValue(undefined);
     const handler = withTenant(async () => NextResponse.json({ ok: true }));
 
@@ -53,8 +160,15 @@ describe("withTenant", () => {
     expect(res.status).toBe(401);
   });
 
-  it("still blocks suspended tenants", async () => {
-    mockCookies.get.mockReturnValue({ value: tenantSession("suspended") });
+  it("returns 401 for a forged cookie", async () => {
+    mockCookies.get.mockReturnValue({ value: "not.a.token" });
+    const handler = withTenant(async () => NextResponse.json({ ok: true }));
+    expect((await handler(req(), { params: undefined as never })).status).toBe(401);
+  });
+
+  it("blocks a tenant suspended after they signed in, using the live database status", async () => {
+    signedIn(); // the cookie still says active
+    findTenant.mockResolvedValue(liveTenant({ status: "suspended" }) as never);
     const handler = withTenant(async () => NextResponse.json({ ok: true }));
 
     const res = await handler(req(), { params: undefined as never });
@@ -63,8 +177,30 @@ describe("withTenant", () => {
     expect((await res.json()).code).toBe("ACCOUNT_SUSPENDED");
   });
 
-  it("still denies a location other than the session's own", async () => {
-    mockCookies.get.mockReturnValue({ value: tenantSession() });
+  it("returns 401 when the tenant no longer exists", async () => {
+    signedIn();
+    findTenant.mockResolvedValue(null);
+    const handler = withTenant(async () => NextResponse.json({ ok: true }));
+    expect((await handler(req(), { params: undefined as never })).status).toBe(401);
+  });
+
+  it("returns 401 when the tenant's location changed since the cookie was issued", async () => {
+    signedIn();
+    findTenant.mockResolvedValue(liveTenant({ crmLocationId: "loc_other" }) as never);
+    const handler = withTenant(async () => NextResponse.json({ ok: true }));
+    expect((await handler(req(), { params: undefined as never })).status).toBe(401);
+  });
+
+  it("hands the handler the live tenant name, not the cookie's", async () => {
+    signedIn();
+    findTenant.mockResolvedValue(liveTenant({ name: "Renamed Co" }) as never);
+    const handler = withTenant(async (_r, session) => NextResponse.json({ name: session.tenantName }));
+    const res = await handler(req(), { params: undefined as never });
+    expect(await res.json()).toEqual({ name: "Renamed Co" });
+  });
+
+  it("denies a location other than the session's own", async () => {
+    signedIn();
     const handler = withTenant(async () => NextResponse.json({ ok: true }));
 
     const res = await handler(req(), {
@@ -76,9 +212,98 @@ describe("withTenant", () => {
   });
 });
 
+describe("withTenantRoute", () => {
+  const ok = vi.fn<(request: NextRequest, context: unknown, session: unknown) => Promise<NextResponse>>(
+    async () => NextResponse.json({ ok: true })
+  );
+  const handler = withTenantRoute(ok);
+  const noParams = { params: Promise.resolve({}) };
+  const jsonPost = (body: unknown, path = "/api/retell/agents") =>
+    req(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+
+  beforeEach(() => ok.mockClear());
+
+  it("returns 401 without a session and never runs the handler", async () => {
+    mockCookies.get.mockReturnValue(undefined);
+    const res = await handler(req("/api/retell/agents?locationId=loc_1"), noParams);
+    expect(res.status).toBe(401);
+    expect(ok).not.toHaveBeenCalled();
+  });
+
+  it("blocks a suspended tenant from every wrapped route", async () => {
+    signedIn();
+    findTenant.mockResolvedValue(liveTenant({ status: "suspended" }) as never);
+    const res = await handler(req("/api/retell/agents?locationId=loc_1"), noParams);
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe("ACCOUNT_SUSPENDED");
+    expect(ok).not.toHaveBeenCalled();
+  });
+
+  it("allows the tenant's own locationId in the query string and passes the session on", async () => {
+    signedIn();
+    const res = await handler(req("/api/retell/agents?locationId=loc_1"), noParams);
+    expect(res.status).toBe(200);
+    expect(ok.mock.calls[0][2]).toMatchObject({ tenantId: "t1", crmLocationId: "loc_1" });
+  });
+
+  it("rejects another tenant's locationId in the query string", async () => {
+    signedIn();
+    const res = await handler(req("/api/retell/agents?locationId=loc_victim"), noParams);
+    expect(res.status).toBe(403);
+    expect(ok).not.toHaveBeenCalled();
+  });
+
+  it("rejects another tenant's locationId in a JSON body, and the handler can still read the body when it matches", async () => {
+    signedIn();
+    expect((await handler(jsonPost({ locationId: "loc_victim" }), noParams)).status).toBe(403);
+    expect(ok).not.toHaveBeenCalled();
+
+    const mine = jsonPost({ locationId: "loc_1", name: "x" });
+    expect((await handler(mine, noParams)).status).toBe(200);
+    // the wrapper only peeked at a clone, so the handler's own read still works
+    expect(await ok.mock.calls[0][0].json()).toEqual({ locationId: "loc_1", name: "x" });
+  });
+
+  it("rejects another tenant's locationId in the URL path", async () => {
+    signedIn();
+    const res = await handler(req("/api/locations/loc_victim"), {
+      params: Promise.resolve({ locationId: "loc_victim" }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("works for routes with no dynamic segment (params undefined)", async () => {
+    signedIn();
+    const res = await handler(req("/api/retell/voices"), undefined as never);
+    expect(res.status).toBe(200);
+  });
+
+  it("ignores a body that is not JSON or has no locationId", async () => {
+    signedIn();
+    const text = req("/api/retell/agents", { method: "POST", headers: { "content-type": "application/json" }, body: "not json" });
+    expect((await handler(text, noParams)).status).toBe(200);
+    expect((await handler(jsonPost({ name: "x" }), noParams)).status).toBe(200);
+  });
+});
+
+describe("locationMismatch", () => {
+  const session = { tenantId: "t1", crmLocationId: "loc_1", tenantName: "Acme", status: "active" as const };
+
+  it("passes the tenant's own location and values that are not supplied", () => {
+    expect(locationMismatch(session, "loc_1")).toBeNull();
+    expect(locationMismatch(session, undefined)).toBeNull();
+    expect(locationMismatch(session, null)).toBeNull();
+  });
+
+  it("returns 403 for any other location", () => {
+    expect(locationMismatch(session, "loc_2")?.status).toBe(403);
+    expect(locationMismatch(session, "")?.status).toBe(403);
+  });
+});
+
 describe("withAdmin", () => {
   it("passes params through when none exist", async () => {
-    mockCookies.get.mockReturnValue({ value: adminSession() });
+    mockCookies.get.mockReturnValue({ value: adminSessionToken() });
     const handler = withAdmin(async (_request, _session, { params }) =>
       NextResponse.json({ params })
     );
@@ -92,13 +317,57 @@ describe("withAdmin", () => {
     expect(await res.json()).toEqual({ params: {} });
   });
 
-  it("still enforces the owner role", async () => {
-    mockCookies.get.mockReturnValue({ value: adminSession("support") });
+  it("returns 401 for a forged admin cookie", async () => {
+    mockCookies.get.mockReturnValue({
+      value: Buffer.from(JSON.stringify({ adminId: "a1", email: "x@y.z", role: "owner" })).toString("base64"),
+    });
+    const handler = withAdmin(async () => NextResponse.json({ ok: true }));
+    const res = await handler(new NextRequest("http://localhost/api/admin/tenants"), { params: undefined as never });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 when the admin was removed after signing in", async () => {
+    mockCookies.get.mockReturnValue({ value: adminSessionToken() });
+    findAdmin.mockResolvedValue(null);
+    const handler = withAdmin(async () => NextResponse.json({ ok: true }));
+    const res = await handler(new NextRequest("http://localhost/api/admin/tenants"), { params: undefined as never });
+    expect(res.status).toBe(401);
+  });
+
+  it("uses the live role, so a demoted owner loses owner access at once", async () => {
+    mockCookies.get.mockReturnValue({ value: adminSessionToken("owner") }); // cookie still says owner
+    findAdmin.mockResolvedValue(liveAdmin("support") as never);
     const handler = withAdmin(async () => NextResponse.json({ ok: true }), "owner");
 
     const res = await handler(
       new NextRequest("http://localhost/api/admin/tenants/t1/limits"),
       { params: Promise.resolve({ tenantId: "t1" }) }
+    );
+
+    expect(res.status).toBe(403);
+  });
+
+  it("still enforces the owner role", async () => {
+    mockCookies.get.mockReturnValue({ value: adminSessionToken("support") });
+    findAdmin.mockResolvedValue(liveAdmin("support") as never);
+    const handler = withAdmin(async () => NextResponse.json({ ok: true }), "owner");
+
+    const res = await handler(
+      new NextRequest("http://localhost/api/admin/tenants/t1/limits"),
+      { params: Promise.resolve({ tenantId: "t1" }) }
+    );
+
+    expect(res.status).toBe(403);
+  });
+
+  it("keeps support read-only", async () => {
+    mockCookies.get.mockReturnValue({ value: adminSessionToken("support") });
+    findAdmin.mockResolvedValue(liveAdmin("support") as never);
+    const handler = withAdmin(async () => NextResponse.json({ ok: true }));
+
+    const res = await handler(
+      new NextRequest("http://localhost/api/admin/tenants", { method: "POST" }),
+      { params: undefined as never }
     );
 
     expect(res.status).toBe(403);

@@ -1,9 +1,10 @@
+import { withTenantRoute } from "@/modules/auth/middleware";
 import { NextResponse } from "next/server";
 import * as retell from "@/lib/retell-api";
 
 // Cheap authenticated call that tells the settings page whether the server's
 // Retell API key works, and how fast Retell answers.
-export async function GET() {
+async function handleGET() {
   if (!process.env.RETELL_API_KEY) {
     return NextResponse.json({
       connected: false,
@@ -23,3 +24,5 @@ export async function GET() {
     });
   }
 }
+
+export const GET = withTenantRoute(handleGET);

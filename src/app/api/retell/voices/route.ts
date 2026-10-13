@@ -1,7 +1,8 @@
+import { withTenantRoute } from "@/modules/auth/middleware";
 import { NextResponse } from "next/server";
 import { getVoicesCached } from "@/lib/voices-cache";
 
-export async function GET() {
+async function handleGET() {
   try {
     return NextResponse.json(await getVoicesCached());
   } catch (error) {
@@ -9,3 +10,5 @@ export async function GET() {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withTenantRoute(handleGET);

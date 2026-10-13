@@ -3,6 +3,9 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
 import { GET, POST } from "@/app/api/retell/agents/route";
+import { tenantSessionToken, liveTenant } from "@/test/auth";
+
+const ctx = { params: Promise.resolve({}) };
 
 // Storage and upstream are both fake here; the route's own filtering,
 // orphan cleanup, naming and conflict rules are what runs for real.
@@ -15,6 +18,9 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+const jar = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
+vi.mock("next/headers", () => ({ cookies: vi.fn(() => jar) }));
+
 vi.mock("@/lib/retell-api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/retell-api")>();
   return {
@@ -26,7 +32,12 @@ vi.mock("@/lib/retell-api", async (importOriginal) => {
 });
 
 const findUnique = vi.mocked(prisma.location.findUnique);
-const tenantFindUnique = vi.mocked(prisma.tenant.findUnique);
+// auth looks the tenant up by id; limits look it up by crmLocationId
+let limitTenant: unknown = null;
+const mockTenantLookups = () =>
+  vi.mocked(prisma.tenant.findUnique).mockImplementation(
+    (async (args: { where: { id?: string } }) => (args.where.id ? liveTenant() : limitTenant)) as never
+  );
 const limitPolicyFindUnique = vi.mocked(prisma.limitPolicy.findUnique);
 const agentCount = vi.mocked(prisma.locationAgent.count);
 const findMany = vi.mocked(prisma.locationAgent.findMany);
@@ -64,14 +75,16 @@ beforeEach(() => {
   upsertLocation.mockResolvedValue({} as never);
   createMapping.mockResolvedValue({} as never);
   // no tenant owns this location in tests, so no limit policy applies
-  tenantFindUnique.mockResolvedValue(null as never);
+  limitTenant = null;
+  mockTenantLookups();
+  jar.get.mockReturnValue({ value: tenantSessionToken() });
   // every test location is called "Bright AI", so names get that suffix
   findUnique.mockResolvedValue({ name: "Bright AI" } as never);
 });
 
 describe("GET /api/retell/agents", () => {
   it("requires a locationId", async () => {
-    const res = await GET(listRequest(""));
+    const res = await GET(listRequest(""), ctx);
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "locationId is required" });
     expect(listAllAgents).not.toHaveBeenCalled();
@@ -80,7 +93,7 @@ describe("GET /api/retell/agents", () => {
   it("returns [] without calling Retell when the location has no mappings", async () => {
     findMany.mockResolvedValue([] as never);
 
-    const res = await GET(listRequest());
+    const res = await GET(listRequest(), ctx);
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([]);
@@ -100,7 +113,7 @@ describe("GET /api/retell/agents", () => {
       voice("a2", "Plumbing [test-chat:agent_a2]", { channel: "chat" }),
     ] as never);
 
-    const res = await GET(listRequest());
+    const res = await GET(listRequest(), ctx);
     const body = await res.json();
 
     expect(body.map((a: { agent_id: string }) => a.agent_id)).toEqual(["a1", "a2"]);
@@ -115,7 +128,7 @@ describe("GET /api/retell/agents", () => {
       voice("a4", "Another location"),
     ] as never);
 
-    await GET(listRequest());
+    await GET(listRequest(), ctx);
 
     expect(hydrateAgents).toHaveBeenCalledTimes(1);
     const passed = hydrateAgents.mock.calls[0][0] as { agent_id: string }[];
@@ -129,7 +142,7 @@ describe("GET /api/retell/agents", () => {
       voice("a1", "Reception", { voice_id: "11labs-Adrian", language: "en-US", is_published: true }),
     ] as never);
 
-    const body = await (await GET(listRequest())).json();
+    const body = await (await GET(listRequest(), ctx)).json();
 
     expect(body[0]).toMatchObject({ voice_id: "11labs-Adrian", language: "en-US", is_published: true });
   });
@@ -139,7 +152,7 @@ describe("GET /api/retell/agents", () => {
     listAllAgents.mockResolvedValue([voice("a1", "Reception")] as never);
     hydrateAgents.mockRejectedValue(new Error("Retell is busy"));
 
-    const res = await GET(listRequest());
+    const res = await GET(listRequest(), ctx);
 
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "Retell is busy" });
@@ -151,7 +164,7 @@ describe("GET /api/retell/agents", () => {
     listAllAgents.mockResolvedValue([voice("kept", "Still here")] as never);
     deleteMany.mockResolvedValue({ count: 1 } as never);
 
-    const res = await GET(listRequest());
+    const res = await GET(listRequest(), ctx);
     const body = await res.json();
 
     expect(body.map((a: { agent_id: string }) => a.agent_id)).toEqual(["kept"]);
@@ -164,7 +177,7 @@ describe("GET /api/retell/agents", () => {
     findMany.mockResolvedValue([{ retellAgentId: "a1" }] as never);
     listAllAgents.mockRejectedValue(new Error("Retell is down"));
 
-    const res = await GET(listRequest());
+    const res = await GET(listRequest(), ctx);
 
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "Retell is down" });
@@ -176,7 +189,7 @@ describe("GET /api/retell/agents", () => {
 
 describe("POST /api/retell/agents", () => {
   it("requires a locationId", async () => {
-    const res = await POST(postRequest({ agent_name: "X" }));
+    const res = await POST(postRequest({ agent_name: "X" }), ctx);
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "locationId is required" });
     expect(createAgent).not.toHaveBeenCalled();
@@ -193,7 +206,7 @@ describe("POST /api/retell/agents", () => {
         voice_id: "voice_1",
         assigned_tags: ["custom-tag"],
       })
-    );
+    , ctx);
 
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ agent_id: "a_new", agent_name: "Reception - Bright AI" });
@@ -223,7 +236,7 @@ describe("POST /api/retell/agents", () => {
 
     const res = await POST(
       postRequest({ locationId: "loc_1", agent_name: "reception", voice_id: "v1" })
-    );
+    , ctx);
 
     expect(res.status).toBe(409);
     const body = await res.json();
@@ -244,7 +257,7 @@ describe("POST /api/retell/agents", () => {
         voice_id: "v1",
         agent_id: "a1",
       })
-    );
+    , ctx);
 
     expect(res.status).toBe(409);
     expect(createAgent).not.toHaveBeenCalled();
@@ -254,7 +267,7 @@ describe("POST /api/retell/agents", () => {
     findMany.mockResolvedValue([] as never);
     createAgent.mockResolvedValue({ agent_id: "a_new" } as never);
 
-    const res = await POST(postRequest({ locationId: "loc_1", agent_name: "   ", voice_id: "v1" }));
+    const res = await POST(postRequest({ locationId: "loc_1", agent_name: "   ", voice_id: "v1" }), ctx);
 
     expect(res.status).toBe(201);
     expect(createAgent.mock.calls[0][0]).toMatchObject({ agent_name: "   " });
@@ -265,7 +278,7 @@ describe("POST /api/retell/agents", () => {
     findMany.mockResolvedValue([] as never);
     createAgent.mockRejectedValue(new Error("voice_id is invalid"));
 
-    const res = await POST(postRequest({ locationId: "loc_1", agent_name: "X", voice_id: "bad" }));
+    const res = await POST(postRequest({ locationId: "loc_1", agent_name: "X", voice_id: "bad" }), ctx);
 
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "voice_id is invalid" });
@@ -273,7 +286,7 @@ describe("POST /api/retell/agents", () => {
   });
 
   it("returns 403 when the tenant is at its agent limit", async () => {
-    tenantFindUnique.mockResolvedValue({ id: "t1", crmLocationId: "loc_1" } as never);
+    limitTenant = { id: "t1", crmLocationId: "loc_1" };
     limitPolicyFindUnique.mockResolvedValue({
       tenantId: "t1",
       metric: "AGENTS",
@@ -286,7 +299,7 @@ describe("POST /api/retell/agents", () => {
 
     const res = await POST(
       postRequest({ locationId: "loc_1", agent_name: "Third", voice_id: "v1" })
-    );
+    , ctx);
 
     expect(res.status).toBe(403);
     const body = await res.json();
@@ -297,7 +310,7 @@ describe("POST /api/retell/agents", () => {
   });
 
   it("allows the create when under the agent limit", async () => {
-    tenantFindUnique.mockResolvedValue({ id: "t1", crmLocationId: "loc_1" } as never);
+    limitTenant = { id: "t1", crmLocationId: "loc_1" };
     limitPolicyFindUnique.mockResolvedValue({
       tenantId: "t1",
       metric: "AGENTS",
@@ -312,7 +325,7 @@ describe("POST /api/retell/agents", () => {
 
     const res = await POST(
       postRequest({ locationId: "loc_1", agent_name: "Third", voice_id: "v1" })
-    );
+    , ctx);
 
     expect(res.status).toBe(201);
     expect(createAgent).toHaveBeenCalled();

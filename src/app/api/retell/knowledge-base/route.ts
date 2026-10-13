@@ -1,10 +1,12 @@
+import { locationMismatch, withTenantRoute } from "@/modules/auth/middleware";
+import type { TenantSession } from "@/modules/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
 import { getLocationName } from "@/lib/location-name";
 import { withLocationName } from "@/lib/naming";
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   const locationId = request.nextUrl.searchParams.get("locationId");
   if (!locationId) {
     return NextResponse.json(
@@ -44,7 +46,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest, _context: unknown, session: TenantSession) {
   try {
     const incoming = await request.formData();
     const locationId = incoming.get("locationId");
@@ -55,6 +57,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    // Multipart bodies are not inspected by the wrapper, so check the field here.
+    const mismatch = locationMismatch(session, locationId);
+    if (mismatch) return mismatch;
 
     const name = incoming.get("knowledge_base_name");
     if (!name || typeof name !== "string" || !name.trim()) {
@@ -120,3 +125,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withTenantRoute(handleGET);
+export const POST = withTenantRoute(handlePOST);

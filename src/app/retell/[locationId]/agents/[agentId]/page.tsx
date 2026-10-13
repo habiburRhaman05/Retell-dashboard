@@ -129,7 +129,7 @@ export default function AgentDetailPage() {
   const llmId = agent?.response_engine?.llm_id;
   const { data: llm, isLoading: llmLoading } = useQuery<RetellLlm>({
     queryKey: ["llm", llmId],
-    queryFn: () => fetchJson<RetellLlm>(`/api/retell/llm/${llmId}`),
+    queryFn: () => fetchJson<RetellLlm>(`/api/retell/llm/${llmId}?agentId=${encodeURIComponent(agentId)}`),
     enabled: !!llmId,
   });
 
@@ -144,7 +144,7 @@ export default function AgentDetailPage() {
 
   const updateLlmMut = useMutation({
     mutationFn: (data: Partial<RetellLlm>) =>
-      fetchJson<RetellLlm>(`/api/retell/llm/${llmId}`, {
+      fetchJson<RetellLlm>(`/api/retell/llm/${llmId}?agentId=${encodeURIComponent(agentId)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

@@ -1,3 +1,4 @@
+import { withTenantRoute } from "@/modules/auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
@@ -13,7 +14,7 @@ async function verifyOwnership(locationId: string, agentId: string) {
   return !!mapping;
 }
 
-export async function GET(
+async function handleGET(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
@@ -42,7 +43,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
+async function handlePATCH(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
@@ -92,7 +93,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
+async function handleDELETE(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
@@ -125,3 +126,7 @@ export async function DELETE(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withTenantRoute(handleGET);
+export const PATCH = withTenantRoute(handlePATCH);
+export const DELETE = withTenantRoute(handleDELETE);

@@ -1,3 +1,4 @@
+import { withTenantRoute } from "@/modules/auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
@@ -23,7 +24,7 @@ async function resolveFlow(locationId: string, agentId: string) {
   return { flowId: engine.conversation_flow_id, version: engine.version };
 }
 
-export async function GET(
+async function handleGET(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
@@ -34,7 +35,7 @@ export async function GET(
   }
   try {
     const r = await resolveFlow(locationId, agentId);
-    if ("error" in r) return r.error;
+    if (r.error) return r.error;
     const flow = await retell.getConversationFlow(r.flowId, r.version);
     return NextResponse.json(flow);
   } catch (error) {
@@ -43,7 +44,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
+async function handlePATCH(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
@@ -55,7 +56,7 @@ export async function PATCH(
       return NextResponse.json({ error: "locationId is required" }, { status: 400 });
     }
     const r = await resolveFlow(locationId, agentId);
-    if ("error" in r) return r.error;
+    if (r.error) return r.error;
     const flow = await retell.updateConversationFlow(r.flowId, patch, r.version);
     return NextResponse.json(flow);
   } catch (error) {
@@ -63,3 +64,6 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withTenantRoute(handleGET);
+export const PATCH = withTenantRoute(handlePATCH);

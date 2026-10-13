@@ -23,17 +23,19 @@ const findAgent = vi.mocked(prisma.locationAgent.findFirst);
 const findTenant = vi.mocked(prisma.tenant.findUnique);
 const transaction = vi.mocked(prisma.$transaction);
 
-const SECRET = "webhook-secret-123";
+const API_KEY = "key_test_webhook_123";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  process.env.RETELL_WEBHOOK_SECRET = SECRET;
+  process.env.RETELL_API_KEY = API_KEY;
   createInbox.mockResolvedValue({ id: "inbox_1" } as never);
   updateInbox.mockResolvedValue({ count: 1 } as never);
 });
 
-function sign(body: string) {
-  return createHmac("sha256", SECRET).update(body).digest("hex");
+// Retell's format: v={timestamp_ms},d=HMAC-SHA256(body + timestamp, apiKey)
+function sign(body: string, ts = Date.now(), key = API_KEY) {
+  const digest = createHmac("sha256", key).update(body + String(ts)).digest("hex");
+  return `v=${ts},d=${digest}`;
 }
 
 function makeRequest(body: string, signature?: string | null) {
@@ -49,20 +51,36 @@ function makeRequest(body: string, signature?: string | null) {
 }
 
 describe("POST /api/webhooks/retell", () => {
-  it("rejects invalid signature with 401", async () => {
+  it("rejects an invalid signature with 401 and writes nothing", async () => {
     const body = JSON.stringify({ event: "call_ended", call: { call_id: "c1" } });
     const res = await POST(makeRequest(body, "wrong-sig"));
     expect(res.status).toBe(401);
-    expect(createInbox).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ signatureValid: false }),
-      })
-    );
+    expect(createInbox).not.toHaveBeenCalled();
   });
 
-  it("rejects missing signature with 401", async () => {
+  it("rejects a missing signature with 401", async () => {
     const body = JSON.stringify({ event: "call_ended", call: { call_id: "c1" } });
     const res = await POST(makeRequest(body, null));
+    expect(res.status).toBe(401);
+    expect(createInbox).not.toHaveBeenCalled();
+  });
+
+  it("rejects a signature made with the wrong key", async () => {
+    const body = JSON.stringify({ event: "call_ended", call: { call_id: "c1" } });
+    const res = await POST(makeRequest(body, sign(body, Date.now(), "key_someone_else")));
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects a replayed webhook with an old timestamp", async () => {
+    const body = JSON.stringify({ event: "call_ended", call: { call_id: "c1" } });
+    const res = await POST(makeRequest(body, sign(body, Date.now() - 10 * 60 * 1000)));
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects everything when the API key is not configured", async () => {
+    process.env.RETELL_API_KEY = " ";
+    const body = JSON.stringify({ event: "call_ended", call: { call_id: "c1" } });
+    const res = await POST(makeRequest(body, sign(body, Date.now(), " ")));
     expect(res.status).toBe(401);
   });
 
@@ -72,7 +90,7 @@ describe("POST /api/webhooks/retell", () => {
     expect(res.status).toBe(400);
   });
 
-  it("stores all events in webhook inbox", async () => {
+  it("stores all signed events in the webhook inbox", async () => {
     const body = JSON.stringify({ event: "call_started", call: { call_id: "c1" } });
     const res = await POST(makeRequest(body, sign(body)));
     expect(res.status).toBe(200);

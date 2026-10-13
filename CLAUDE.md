@@ -97,6 +97,8 @@ A task is not done until all of these are true:
 Verified in Retell docs (Oct 2026):
 - Webhook events include `call_started`, `call_ended`, `call_analyzed`, and chat equivalents. Signed with `x-retell-signature`. Retries up to 3 times, so duplicates happen.
 - The inbound call webhook can answer `{ "reject": true }` to hang up before any agent starts.
+- Webhook signature (verified Oct 2026): `x-retell-signature: v={timestamp_ms},d={hex}`, digest = HMAC-SHA256(rawBody + timestamp) keyed with the **API key that has the webhook badge** (no separate secret). Reject timestamps older than 5 minutes.
+- Legacy `GET /list-agents` and `GET /list-chat-agents` are retired. Use `POST /v2/list-agents` (query `limit`, `pagination_key`; body `filter_criteria.channel`). Items are summaries only (`agent_id`, `agent_name`, `channel`, `user_modified_timestamp`, `tags`); full settings need `get-agent` / `get-chat-agent`.
 
 NOT verified (confirm with a spike before relying on it):
 - What setting `outbound_agents` (or `inbound_agents`) to `null` does on `update-phone-number`.
@@ -122,4 +124,12 @@ Assumptions awaiting the boss's answer (change them only when told):
 
 ## 8. Current status
 
-The code today is the single-customer dashboard: no authentication, no usage records, no tests, no migrations. The roadmap is five phases (Foundation, Admin v1, Usage, Limits, Rollout). Prompts for each phase are in `docs/PROMPTS.md`.
+Built: tenants and admin panel, signed sessions (`jose`, `SESSION_SECRET`), admin-minted signed tenant links, live tenant/admin status check on every request (`withTenant`, `withTenantRoute`, `withAdmin`), a route-matrix test, usage ledger from webhooks, limit policies and feature switches (admin UI), 700+ tests with a faked Retell.
+
+Still open:
+- `checkAccess` (suspend / feature switch / lock) and `LimitGuard` are only wired into agent create and import. Knowledge base create, web call, chat and simulate are not gated, and locks are never created automatically.
+- Tenant PATCH bodies for agents, LLMs and flows are not fully allow-listed (rule 8).
+- Tenants can still rename their own location (rule 7).
+- Admin passwords are unsalted SHA-256 with no login rate limit; no way to add or change admins.
+- `UNTESTED` in `src/app/api/route-matrix.test.ts` lists routes that still need tests.
+- Plan phases not started: Docker PostgreSQL integration tests, Playwright, Sentry.

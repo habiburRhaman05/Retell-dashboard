@@ -95,6 +95,12 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
   });
   const [limitSaving, setLimitSaving] = useState(false);
   const [limitMsg, setLimitMsg] = useState("");
+  const [linkState, setLinkState] = useState<{
+    url: string;
+    loading: boolean;
+    error: string;
+    copied: boolean;
+  }>({ url: "", loading: false, error: "", copied: false });
   const accessFetched = useRef(false);
   const usageFetched = useRef(false);
 
@@ -159,6 +165,30 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
       setMessage("Connection error");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function generateLink() {
+    setLinkState({ url: "", loading: true, error: "", copied: false });
+    try {
+      const res = await fetch(`/api/admin/tenants/${tenant.id}/link`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) {
+        setLinkState({ url: data.url, loading: false, error: "", copied: false });
+      } else {
+        setLinkState({ url: "", loading: false, error: data.error ?? "Could not create the link", copied: false });
+      }
+    } catch {
+      setLinkState({ url: "", loading: false, error: "Connection error", copied: false });
+    }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(linkState.url);
+      setLinkState((prev) => ({ ...prev, copied: true }));
+    } catch {
+      setLinkState((prev) => ({ ...prev, error: "Copy failed. Select the link and copy it by hand." }));
     }
   }
 
@@ -603,12 +633,43 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
           {/* Dashboard Link */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-sm font-semibold text-gray-900 mb-2">Dashboard Access</h3>
-            <p className="text-sm text-gray-500 mb-2">
-              This tenant accesses the dashboard through the CRM custom menu link with their location ID.
+            <p className="text-sm text-gray-500 mb-3">
+              Tenants open their dashboard only through a signed link. Create one and paste it into this
+              tenant&apos;s CRM custom menu. The link opens this tenant&apos;s dashboard and nothing else.
             </p>
-            <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs font-mono text-gray-600 break-all">
-              /retell/{tenant.crmLocationId}/dashboard
-            </div>
+            <button
+              onClick={generateLink}
+              disabled={linkState.loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            >
+              {linkState.loading ? "Creating..." : linkState.url ? "Create another link" : "Generate dashboard link"}
+            </button>
+            {linkState.error && (
+              <p className="mt-3 text-sm text-red-600 bg-red-50 p-3 rounded-lg">{linkState.error}</p>
+            )}
+            {linkState.url && (
+              <div className="mt-3 space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    aria-label="Dashboard link"
+                    value={linkState.url}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono bg-gray-50"
+                  />
+                  <button
+                    onClick={copyLink}
+                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    {linkState.copied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Treat this link like a password: anyone who has it can open this dashboard. It is valid for one
+                  year. To cut access sooner, suspend the account.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

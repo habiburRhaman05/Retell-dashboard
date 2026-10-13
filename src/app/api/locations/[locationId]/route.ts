@@ -1,8 +1,9 @@
+import { withTenantRoute } from "@/modules/auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLocationName } from "@/lib/location-name";
 
-export async function GET(
+async function handleGET(
   _request: NextRequest,
   { params }: { params: Promise<{ locationId: string }> }
 ) {
@@ -15,7 +16,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
+async function handlePUT(
   request: NextRequest,
   { params }: { params: Promise<{ locationId: string }> }
 ) {
@@ -38,3 +39,6 @@ export async function PUT(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withTenantRoute(handleGET);
+export const PUT = withTenantRoute(handlePUT);

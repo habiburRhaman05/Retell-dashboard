@@ -1,8 +1,9 @@
+import { withTenantRoute } from "@/modules/auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   const locationId = request.nextUrl.searchParams.get("locationId");
   if (!locationId) {
     return NextResponse.json(
@@ -32,3 +33,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withTenantRoute(handleGET);

@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    tenant: { findUnique: vi.fn() },
     usageEvent: { findMany: vi.fn() },
     usageCounter: { findMany: vi.fn() },
   },
@@ -14,15 +15,15 @@ vi.mock("next/headers", () => ({
 }));
 
 import { prisma } from "@/lib/prisma";
+import { tenantSessionToken, liveTenant } from "@/test/auth";
 import { GET } from "./route";
 
 const findEvents = vi.mocked(prisma.usageEvent.findMany);
 const findCounters = vi.mocked(prisma.usageCounter.findMany);
 
 function tenantSession() {
-  return Buffer.from(JSON.stringify({
-    tenantId: "t1", crmLocationId: "loc_1", tenantName: "Acme", status: "active",
-  })).toString("base64");
+  vi.mocked(prisma.tenant.findUnique).mockResolvedValue(liveTenant() as never);
+  return tenantSessionToken();
 }
 
 const context = { params: Promise.resolve({}) };

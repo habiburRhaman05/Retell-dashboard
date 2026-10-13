@@ -5,9 +5,12 @@ import { prisma } from "@/lib/prisma";
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get("x-retell-signature");
-  const secret = process.env.RETELL_WEBHOOK_SECRET ?? "";
 
-  const valid = verifyRetellSignature(rawBody, signature, secret);
+  // Retell signs with the API key, not a separate secret. Check before touching
+  // the database so unsigned requests cannot write anything.
+  if (!verifyRetellSignature(rawBody, signature, process.env.RETELL_API_KEY ?? "")) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
 
   let parsed: { event?: string; call?: Record<string, unknown>; call_id?: string; [k: string]: unknown };
   try {
@@ -24,13 +27,9 @@ export async function POST(request: NextRequest) {
       eventType,
       callId: callId || null,
       rawBody,
-      signatureValid: valid,
+      signatureValid: true,
     },
   });
-
-  if (!valid) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-  }
 
   if (eventType === "call_ended" || eventType === "call_analyzed") {
     const callData = (parsed.call ?? parsed) as Record<string, unknown>;

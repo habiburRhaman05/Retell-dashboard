@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { locationAgent: { findMany: vi.fn() } },
+  prisma: { locationAgent: { findMany: vi.fn() }, tenant: { findUnique: vi.fn() } },
 }));
+
+const jar = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
+vi.mock("next/headers", () => ({ cookies: vi.fn(() => jar) }));
 
 vi.mock("@/lib/retell-api", () => ({
   listAllAgents: vi.fn(),
@@ -14,7 +17,10 @@ vi.mock("@/lib/retell-api", () => ({
 
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
+import { tenantSessionToken, liveTenant } from "@/test/auth";
 import { GET } from "./route";
+
+const ctx = { params: Promise.resolve({}) };
 
 const findMany = vi.mocked(prisma.locationAgent.findMany);
 const listAllAgents = vi.mocked(retell.listAllAgents);
@@ -34,6 +40,8 @@ const request = (query = "locationId=loc_1") =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  jar.get.mockReturnValue({ value: tenantSessionToken() });
+  vi.mocked(prisma.tenant.findUnique).mockResolvedValue(liveTenant() as never);
   findMany.mockResolvedValue([{ retellAgentId: "a1" }, { retellAgentId: "c1" }] as never);
   listCalls.mockResolvedValue({ items: [], has_more: false } as never);
   hydrateAgents.mockImplementation(async (list) => list as never);
@@ -41,13 +49,13 @@ beforeEach(() => {
 
 describe("GET /api/retell/analytics", () => {
   it("requires a locationId", async () => {
-    const res = await GET(request(""));
+    const res = await GET(request(""), ctx);
     expect(res.status).toBe(400);
     expect(listAllAgents).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid date range", async () => {
-    const res = await GET(request("locationId=loc_1&start=200&end=100"));
+    const res = await GET(request("locationId=loc_1&start=200&end=100"), ctx);
     expect(res.status).toBe(400);
     expect(listCalls).not.toHaveBeenCalled();
   });
@@ -55,7 +63,7 @@ describe("GET /api/retell/analytics", () => {
   it("returns empty analytics without calling Retell when the location has no agents", async () => {
     findMany.mockResolvedValue([] as never);
 
-    const res = await GET(request());
+    const res = await GET(request(), ctx);
 
     expect(res.status).toBe(200);
     expect((await res.json()).callAnalytics.totalCalls).toBe(0);
@@ -71,7 +79,7 @@ describe("GET /api/retell/analytics", () => {
       summary("other_location"),
     ] as never);
 
-    const res = await GET(request());
+    const res = await GET(request(), ctx);
 
     expect(res.status).toBe(200);
     expect(hydrateAgents).toHaveBeenCalledTimes(1);
@@ -86,7 +94,7 @@ describe("GET /api/retell/analytics", () => {
     ] as never);
     getRetellLlm.mockResolvedValue({ model: "gpt-4o-mini" } as never);
 
-    const res = await GET(request());
+    const res = await GET(request(), ctx);
 
     expect(res.status).toBe(200);
     expect(getRetellLlm).toHaveBeenCalledTimes(1);
@@ -97,7 +105,7 @@ describe("GET /api/retell/analytics", () => {
     listAllAgents.mockResolvedValue([summary("a1")] as never);
     hydrateAgents.mockRejectedValue(new Error("Retell is busy"));
 
-    const res = await GET(request());
+    const res = await GET(request(), ctx);
 
     expect(res.status).toBe(200);
     expect(listCalls).toHaveBeenCalledTimes(1);
@@ -107,9 +115,32 @@ describe("GET /api/retell/analytics", () => {
     listAllAgents.mockResolvedValue([summary("a1")] as never);
     listCalls.mockRejectedValue(new Error("calls broke"));
 
-    const res = await GET(request());
+    const res = await GET(request(), ctx);
 
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "calls broke" });
+  });
+});
+
+describe("access control", () => {
+  it("returns 401 without a session and never reaches Retell", async () => {
+    jar.get.mockReturnValue(undefined);
+    const res = await GET(request("locationId=loc_1"), ctx);
+    expect(res.status).toBe(401);
+    expect(listAllAgents).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when asking for another tenant's location", async () => {
+    const res = await GET(request("locationId=loc_victim"), ctx);
+    expect(res.status).toBe(403);
+    expect(listAllAgents).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 ACCOUNT_SUSPENDED for a tenant suspended after signing in", async () => {
+    vi.mocked(prisma.tenant.findUnique).mockResolvedValue(liveTenant({ status: "suspended" }) as never);
+    const res = await GET(request(), ctx);
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe("ACCOUNT_SUSPENDED");
+    expect(listAllAgents).not.toHaveBeenCalled();
   });
 });

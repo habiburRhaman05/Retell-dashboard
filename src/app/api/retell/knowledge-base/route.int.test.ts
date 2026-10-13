@@ -3,13 +3,20 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
 import { GET, POST } from "@/app/api/retell/knowledge-base/route";
+import { tenantSessionToken, liveTenant } from "@/test/auth";
+
+const ctx = { params: Promise.resolve({}) };
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     locationKnowledgeBase: { findMany: vi.fn(), deleteMany: vi.fn(), create: vi.fn() },
     location: { upsert: vi.fn(), findUnique: vi.fn() },
+    tenant: { findUnique: vi.fn() },
   },
 }));
+
+const jar = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
+vi.mock("next/headers", () => ({ cookies: vi.fn(() => jar) }));
 
 vi.mock("@/lib/retell-api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/retell-api")>();
@@ -55,6 +62,8 @@ const validCreate = () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  jar.get.mockReturnValue({ value: tenantSessionToken() });
+  vi.mocked(prisma.tenant.findUnique).mockResolvedValue(liveTenant() as never);
   upsertLocation.mockResolvedValue({} as never);
   createMapping.mockResolvedValue({} as never);
   findUnique.mockResolvedValue({ name: "Bright AI" } as never);
@@ -62,7 +71,7 @@ beforeEach(() => {
 
 describe("GET /api/retell/knowledge-base", () => {
   it("requires a locationId", async () => {
-    const res = await GET(listRequest(""));
+    const res = await GET(listRequest(""), ctx);
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "locationId is required" });
     expect(listKnowledgeBases).not.toHaveBeenCalled();
@@ -71,7 +80,7 @@ describe("GET /api/retell/knowledge-base", () => {
   it("returns [] without calling Retell when nothing is mapped", async () => {
     findMany.mockResolvedValue([] as never);
 
-    const res = await GET(listRequest());
+    const res = await GET(listRequest(), ctx);
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([]);
@@ -89,7 +98,7 @@ describe("GET /api/retell/knowledge-base", () => {
     ] as never);
     deleteMany.mockResolvedValue({ count: 1 } as never);
 
-    const res = await GET(listRequest());
+    const res = await GET(listRequest(), ctx);
     const body = await res.json();
 
     expect(body).toEqual([kb("kb_keep", "Kept docs")]);
@@ -102,7 +111,7 @@ describe("GET /api/retell/knowledge-base", () => {
     findMany.mockResolvedValue([{ retellKnowledgeBaseId: "kb1" }] as never);
     listKnowledgeBases.mockRejectedValue(new Error("Retell is down"));
 
-    const res = await GET(listRequest());
+    const res = await GET(listRequest(), ctx);
 
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "Retell is down" });
@@ -112,14 +121,14 @@ describe("GET /api/retell/knowledge-base", () => {
 
 describe("POST /api/retell/knowledge-base", () => {
   it("requires a locationId", async () => {
-    const res = await POST(postRequest({ knowledge_base_name: "FAQ" }));
+    const res = await POST(postRequest({ knowledge_base_name: "FAQ" }), ctx);
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "locationId is required" });
     expect(createKnowledgeBase).not.toHaveBeenCalled();
   });
 
   it("requires a non-blank name", async () => {
-    const res = await POST(postRequest({ locationId: "loc_1", knowledge_base_name: "   " }));
+    const res = await POST(postRequest({ locationId: "loc_1", knowledge_base_name: "   " }), ctx);
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "Knowledge base name is required" });
   });
@@ -127,7 +136,7 @@ describe("POST /api/retell/knowledge-base", () => {
   it("enforces Retell's 40 character name limit", async () => {
     const res = await POST(
       postRequest({ ...validCreate(), knowledge_base_name: "x".repeat(40) })
-    );
+    , ctx);
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({
       error: "Knowledge base name must be less than 40 characters",
@@ -140,13 +149,13 @@ describe("POST /api/retell/knowledge-base", () => {
 
     const res = await POST(
       postRequest({ ...validCreate(), knowledge_base_name: "x".repeat(39) })
-    );
+    , ctx);
 
     expect(res.status).toBe(201);
   });
 
   it("requires at least one source", async () => {
-    const res = await POST(postRequest({ locationId: "loc_1", knowledge_base_name: "FAQ" }));
+    const res = await POST(postRequest({ locationId: "loc_1", knowledge_base_name: "FAQ" }), ctx);
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/at least one file, text entry, or URL/);
@@ -157,7 +166,7 @@ describe("POST /api/retell/knowledge-base", () => {
     createKnowledgeBase.mockResolvedValue(kb("kb_new", "FAQ - Bright AI") as never);
     findMany.mockResolvedValue([] as never);
 
-    const res = await POST(postRequest(validCreate()));
+    const res = await POST(postRequest(validCreate()), ctx);
 
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual(kb("kb_new", "FAQ - Bright AI"));
@@ -190,7 +199,7 @@ describe("POST /api/retell/knowledge-base", () => {
 
     const res = await POST(
       postRequest({ ...validCreate(), knowledge_base_name: "y".repeat(39) })
-    );
+    , ctx);
 
     expect(res.status).toBe(201);
     const forwardedName = String(createKnowledgeBase.mock.calls[0][0].get("knowledge_base_name"));
@@ -201,10 +210,46 @@ describe("POST /api/retell/knowledge-base", () => {
   it("returns 500 when Retell rejects the upload", async () => {
     createKnowledgeBase.mockRejectedValue(new Error("unsupported file type"));
 
-    const res = await POST(postRequest(validCreate()));
+    const res = await POST(postRequest(validCreate()), ctx);
 
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "unsupported file type" });
     expect(createMapping).not.toHaveBeenCalled();
+  });
+});
+
+describe("access control", () => {
+  it("GET returns 401 without a session and never reaches Retell", async () => {
+    jar.get.mockReturnValue(undefined);
+    const res = await GET(listRequest(), ctx);
+    expect(res.status).toBe(401);
+    expect(listKnowledgeBases).not.toHaveBeenCalled();
+  });
+
+  it("POST returns 401 without a session and creates nothing", async () => {
+    jar.get.mockReturnValue(undefined);
+    const res = await POST(postRequest(validCreate()), ctx);
+    expect(res.status).toBe(401);
+    expect(createKnowledgeBase).not.toHaveBeenCalled();
+  });
+
+  it("GET returns 403 for another tenant's location", async () => {
+    const res = await GET(listRequest("locationId=loc_victim"), ctx);
+    expect(res.status).toBe(403);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it("POST returns 403 when the multipart locationId is another tenant's, and creates nothing", async () => {
+    const res = await POST(postRequest({ ...validCreate(), locationId: "loc_victim" }), ctx);
+    expect(res.status).toBe(403);
+    expect(createKnowledgeBase).not.toHaveBeenCalled();
+    expect(createMapping).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 ACCOUNT_SUSPENDED for a tenant suspended after signing in", async () => {
+    vi.mocked(prisma.tenant.findUnique).mockResolvedValue(liveTenant({ status: "suspended" }) as never);
+    const res = await GET(listRequest(), ctx);
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe("ACCOUNT_SUSPENDED");
   });
 });

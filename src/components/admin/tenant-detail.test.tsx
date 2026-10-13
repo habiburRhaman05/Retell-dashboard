@@ -112,6 +112,81 @@ describe("TenantDetail", () => {
     expect(screen.getByText("Reactivate Account")).toBeInTheDocument();
   });
 
+  describe("dashboard link", () => {
+    const answer = (link: { ok: boolean; body: unknown }) =>
+      vi.fn(async (url: string) =>
+        String(url).endsWith("/link")
+          ? { ok: link.ok, json: async () => link.body }
+          : { ok: true, json: async () => [] }
+      );
+
+    it("creates a signed link on demand and shows it", async () => {
+      const mock = answer({ ok: true, body: { url: "https://app.test/retell/loc_abc/dashboard?token=SIGNED", expiresAt: "2027-10-01T00:00:00Z" } });
+      global.fetch = mock as never;
+      const user = userEvent.setup();
+      render(<TenantDetail tenant={baseTenant} />);
+      await user.click(screen.getByText("Access"));
+
+      expect(screen.queryByLabelText("Dashboard link")).not.toBeInTheDocument();
+      await user.click(screen.getByText("Generate dashboard link"));
+
+      expect(await screen.findByDisplayValue(/token=SIGNED/)).toBeInTheDocument();
+      expect(mock).toHaveBeenCalledWith("/api/admin/tenants/t1/link", { method: "POST" });
+      expect(screen.getByText(/Treat this link like a password/)).toBeInTheDocument();
+      expect(screen.getByText("Create another link")).toBeInTheDocument();
+    });
+
+    it("does not call the API until the admin asks for a link", async () => {
+      const mock = answer({ ok: true, body: { url: "x" } });
+      global.fetch = mock as never;
+      const user = userEvent.setup();
+      render(<TenantDetail tenant={baseTenant} />);
+      await user.click(screen.getByText("Access"));
+
+      expect(mock.mock.calls.some(([u]) => String(u).endsWith("/link"))).toBe(false);
+    });
+
+    it("shows the server's error when the link cannot be created", async () => {
+      global.fetch = answer({ ok: false, body: { error: "Owner access required" } }) as never;
+      const user = userEvent.setup();
+      render(<TenantDetail tenant={baseTenant} />);
+      await user.click(screen.getByText("Access"));
+      await user.click(screen.getByText("Generate dashboard link"));
+
+      expect(await screen.findByText("Owner access required")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Dashboard link")).not.toBeInTheDocument();
+    });
+
+    it("shows a connection error when the request fails", async () => {
+      global.fetch = vi.fn(async (url: string) => {
+        if (String(url).endsWith("/link")) throw new Error("offline");
+        return { ok: true, json: async () => [] };
+      }) as never;
+      const user = userEvent.setup();
+      render(<TenantDetail tenant={baseTenant} />);
+      await user.click(screen.getByText("Access"));
+      await user.click(screen.getByText("Generate dashboard link"));
+
+      expect(await screen.findByText("Connection error")).toBeInTheDocument();
+    });
+
+    it("copies the link to the clipboard", async () => {
+      global.fetch = answer({ ok: true, body: { url: "https://app.test/retell/loc_abc/dashboard?token=SIGNED" } }) as never;
+      const user = userEvent.setup();
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+      render(<TenantDetail tenant={baseTenant} />);
+      await user.click(screen.getByText("Access"));
+      await user.click(screen.getByText("Generate dashboard link"));
+      await screen.findByDisplayValue(/token=SIGNED/);
+
+      await user.click(screen.getByText("Copy"));
+
+      expect(writeText).toHaveBeenCalledWith("https://app.test/retell/loc_abc/dashboard?token=SIGNED");
+      expect(await screen.findByText("Copied")).toBeInTheDocument();
+    });
+  });
+
   it("switches to audit tab and shows log entries", async () => {
     const user = userEvent.setup();
     render(<TenantDetail tenant={baseTenant} />);

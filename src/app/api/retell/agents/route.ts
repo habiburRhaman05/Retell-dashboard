@@ -1,3 +1,4 @@
+import { withTenantRoute } from "@/modules/auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
@@ -7,7 +8,7 @@ import { nameTakenInLocation } from "@/lib/agent-name-check";
 import { duplicateAgentMessage } from "@/lib/agent-names";
 import { checkLimitForLocation } from "@/modules/limits";
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   const locationId = request.nextUrl.searchParams.get("locationId");
   if (!locationId) {
     return NextResponse.json(
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   try {
     const body = await request.json();
     const { locationId, ...agentData } = body;
@@ -111,3 +112,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const GET = withTenantRoute(handleGET);
+export const POST = withTenantRoute(handlePOST);

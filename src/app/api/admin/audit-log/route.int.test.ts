@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    adminUser: { findUnique: vi.fn() },
     auditLog: { findMany: vi.fn() },
   },
 }));
@@ -13,20 +14,19 @@ vi.mock("next/headers", () => ({
 }));
 
 import { prisma } from "@/lib/prisma";
+import { adminSessionToken, liveAdmin } from "@/test/auth";
 import { GET } from "./route";
 
 const findMany = vi.mocked(prisma.auditLog.findMany);
 
 function ownerSession() {
-  return Buffer.from(JSON.stringify({
-    adminId: "a1", email: "admin@test.com", role: "owner",
-  })).toString("base64");
+  vi.mocked(prisma.adminUser.findUnique).mockResolvedValue(liveAdmin("owner") as never);
+  return adminSessionToken("owner");
 }
 
 function supportSession() {
-  return Buffer.from(JSON.stringify({
-    adminId: "a2", email: "support@test.com", role: "support",
-  })).toString("base64");
+  vi.mocked(prisma.adminUser.findUnique).mockResolvedValue(liveAdmin("support") as never);
+  return adminSessionToken("support");
 }
 
 const context = { params: Promise.resolve({}) };

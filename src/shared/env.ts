@@ -3,7 +3,6 @@ import { z } from "zod";
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   RETELL_API_KEY: z.string().min(1, "RETELL_API_KEY is required"),
-  RETELL_WEBHOOK_SECRET: z.string().optional().default(""),
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PASSWORD: z.string().optional(),
   ALLOWED_FRAME_ANCESTORS: z.string().optional().default(""),

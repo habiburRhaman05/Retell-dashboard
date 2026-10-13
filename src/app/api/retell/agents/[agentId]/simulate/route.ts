@@ -1,3 +1,4 @@
+import { withTenantRoute } from "@/modules/auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as retell from "@/lib/retell-api";
@@ -57,7 +58,7 @@ async function cleanup(runs: retell.TestRun[]) {
   await Promise.allSettled(ids.map((id) => retell.deleteTestCaseDefinition(id)));
 }
 
-export async function POST(
+async function handlePOST(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
@@ -108,7 +109,7 @@ export async function POST(
   }
 }
 
-export async function GET(
+async function handleGET(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
@@ -148,7 +149,7 @@ export async function GET(
 }
 
 /** Cancel: remove the run's throwaway test case. */
-export async function DELETE(
+async function handleDELETE(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
@@ -171,3 +172,7 @@ export async function DELETE(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = withTenantRoute(handlePOST);
+export const GET = withTenantRoute(handleGET);
+export const DELETE = withTenantRoute(handleDELETE);
