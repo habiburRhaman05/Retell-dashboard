@@ -25,12 +25,14 @@ describe("AdminDashboardLayout", () => {
     expect(screen.queryByText("Child content")).not.toBeInTheDocument();
   });
 
-  it("renders the dashboard chrome and children for a valid session", async () => {
+  it("renders the nav and children for a valid session, with no email/role/sign-out chrome", async () => {
     getAdminSession.mockResolvedValue({ adminId: "a1", email: "admin@test.com", role: "owner" });
     const ui = await AdminDashboardLayout({ children: <div>Child content</div> });
     render(ui);
     expect(screen.getByText("Child content")).toBeInTheDocument();
-    expect(screen.getByText("admin@test.com")).toBeInTheDocument();
-    expect(screen.getByText("owner")).toBeInTheDocument();
+    expect(screen.getByText("nav")).toBeInTheDocument();
+    expect(screen.queryByText("admin@test.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("owner")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sign out")).not.toBeInTheDocument();
   });
 });
