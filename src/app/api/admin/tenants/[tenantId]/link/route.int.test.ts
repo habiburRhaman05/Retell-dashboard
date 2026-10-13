@@ -79,6 +79,30 @@ describe("POST /api/admin/tenants/[tenantId]/link", () => {
     expect(url.startsWith("https://app.example.com/retell/loc_1/dashboard?token=")).toBe(true);
   });
 
+  it("ignores a localhost NEXT_PUBLIC_APP_URL when the admin is on the live site", async () => {
+    signedInAs("owner");
+    process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
+
+    const live = new NextRequest("https://retell-dashboard-delta.vercel.app/api/admin/tenants/t1/link", { method: "POST" });
+    const { url } = await (await POST(live, context)).json();
+
+    expect(url.startsWith("https://retell-dashboard-delta.vercel.app/retell/loc_1/dashboard?token=")).toBe(true);
+  });
+
+  it("keeps a localhost NEXT_PUBLIC_APP_URL when the admin is local too", async () => {
+    signedInAs("owner");
+    process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
+    const { url } = await (await POST(request(), context)).json();
+    expect(url.startsWith("http://localhost:3000/retell/loc_1/dashboard?token=")).toBe(true);
+  });
+
+  it("lets a local admin make production links when NEXT_PUBLIC_APP_URL is the live address", async () => {
+    signedInAs("owner");
+    process.env.NEXT_PUBLIC_APP_URL = "https://retell-dashboard-delta.vercel.app";
+    const { url } = await (await POST(request(), context)).json();
+    expect(url.startsWith("https://retell-dashboard-delta.vercel.app/retell/loc_1/dashboard?token=")).toBe(true);
+  });
+
   it("audits the action without writing the token anywhere", async () => {
     signedInAs("owner");
 
