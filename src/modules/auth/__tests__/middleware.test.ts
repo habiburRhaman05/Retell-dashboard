@@ -9,8 +9,10 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 const mockCookies = { get: vi.fn(), set: vi.fn(), delete: vi.fn() };
+const mockHeaders = vi.fn(async () => new Headers());
 vi.mock("next/headers", () => ({
   cookies: vi.fn(() => mockCookies),
+  headers: () => mockHeaders(),
 }));
 
 import { prisma } from "@/lib/prisma";
@@ -42,6 +44,7 @@ const signedIn = (token = tenantSessionToken()) => mockCookies.get.mockReturnVal
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockHeaders.mockResolvedValue(new Headers());
   findTenant.mockResolvedValue(liveTenant() as never);
   findAdmin.mockResolvedValue(liveAdmin() as never);
 });
@@ -133,6 +136,45 @@ describe("session cookies", () => {
     } finally {
       process.env.SESSION_SECRET = saved;
     }
+  });
+});
+
+describe("duplicate cookies with the same name", () => {
+  const legacy = (payload: object) => Buffer.from(JSON.stringify(payload)).toString("base64");
+  const withCookieHeader = (header: string) => mockHeaders.mockResolvedValue(new Headers({ cookie: header }));
+
+  it("uses the valid tenant cookie even when a stale legacy one is sent first", async () => {
+    const old = legacy({ tenantId: "t1", crmLocationId: "loc_1" });
+    withCookieHeader(`tenant_session=${old}; other=1; tenant_session=${tenantSessionToken()}`);
+    mockCookies.get.mockReturnValue({ value: old }); // the jar only exposes one of them
+
+    expect(await getTenantSession()).toMatchObject({ tenantId: "t1", crmLocationId: "loc_1" });
+  });
+
+  it("uses the valid admin cookie even when a stale legacy one is sent first", async () => {
+    const old = legacy({ adminId: "a1", email: "x@y.z", role: "owner" });
+    withCookieHeader(`admin_session=${old}; admin_session=${adminSessionToken("support")}`);
+    mockCookies.get.mockReturnValue({ value: old });
+
+    expect(await getAdminSession()).toMatchObject({ adminId: "a1", role: "support" });
+  });
+
+  it("still rejects when every cookie of that name is invalid", async () => {
+    withCookieHeader(`tenant_session=${legacy({ tenantId: "t1" })}; tenant_session=garbage`);
+    mockCookies.get.mockReturnValue({ value: "garbage" });
+    expect(await getTenantSession()).toBeNull();
+  });
+
+  it("does not mistake a differently named cookie for the session", async () => {
+    withCookieHeader(`my_tenant_session=${tenantSessionToken()}`);
+    mockCookies.get.mockReturnValue(undefined);
+    expect(await getTenantSession()).toBeNull();
+  });
+
+  it("falls back to the cookie jar when request headers are unavailable", async () => {
+    mockHeaders.mockRejectedValue(new Error("outside a request"));
+    mockCookies.get.mockReturnValue({ value: tenantSessionToken() });
+    expect(await getTenantSession()).toMatchObject({ tenantId: "t1" });
   });
 });
 

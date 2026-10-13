@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import type { TenantSession, AdminSession } from "./service";
 import {
@@ -42,12 +42,41 @@ export async function setTenantSession(session: TenantSession): Promise<void> {
   jar.set(TENANT_COOKIE, token, tenantCookieOptions());
 }
 
+// A browser can hold several cookies with the same name (an old one from an earlier
+// version with another path or attributes, next to the current one), and sends them
+// all. Reading just one could pick a stale cookie and lock the user out, so collect
+// every value and let the caller use the first that verifies.
+async function cookieValues(name: string): Promise<string[]> {
+  const values: string[] = [];
+  try {
+    const header = (await headers()).get("cookie") ?? "";
+    for (const part of header.split(";")) {
+      const eq = part.indexOf("=");
+      if (eq > 0 && part.slice(0, eq).trim() === name) values.push(part.slice(eq + 1).trim());
+    }
+  } catch {
+    // no request headers available here; the cookie jar below still works
+  }
+  const jar = await cookies();
+  const single = jar.get(name)?.value;
+  if (single && !values.includes(single)) values.push(single);
+  return values;
+}
+
+async function firstValidClaims(
+  kind: "tenant-session" | "admin-session",
+  name: string
+): Promise<Record<string, string> | null> {
+  for (const value of await cookieValues(name)) {
+    const claims = await verifyToken(kind, value);
+    if (claims) return claims;
+  }
+  return null;
+}
+
 /** The signed-in tenant from the cookie. Use withTenant/withTenantRoute for the live status check. */
 export async function getTenantSession(): Promise<TenantSession | null> {
-  const jar = await cookies();
-  const raw = jar.get(TENANT_COOKIE)?.value;
-  if (!raw) return null;
-  const c = await verifyToken("tenant-session", raw);
+  const c = await firstValidClaims("tenant-session", TENANT_COOKIE);
   if (!c?.tenantId || !c.crmLocationId) return null;
   return {
     tenantId: c.tenantId,
@@ -74,10 +103,7 @@ export async function setAdminSession(session: AdminSession): Promise<void> {
 }
 
 export async function getAdminSession(): Promise<AdminSession | null> {
-  const jar = await cookies();
-  const raw = jar.get(ADMIN_COOKIE)?.value;
-  if (!raw) return null;
-  const c = await verifyToken("admin-session", raw);
+  const c = await firstValidClaims("admin-session", ADMIN_COOKIE);
   if (!c?.adminId || !c.email) return null;
   return {
     adminId: c.adminId,
