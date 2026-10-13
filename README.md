@@ -7,7 +7,8 @@ Set these in `.env.local` (never commit it):
 | Variable | Purpose |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string |
-| `RETELL_API_KEY` | The one Retell account key. It also signs Retell webhooks, so it must be the key with the webhook badge |
+| `RETELL_API_KEY` | The one Retell account key used for every Retell call |
+| `RETELL_WEBHOOK_KEY` | Optional. The Retell API key that carries the webhook badge, if it differs from `RETELL_API_KEY`. Webhooks are verified with this, falling back to `RETELL_API_KEY` |
 | `SESSION_SECRET` | At least 32 random characters. Signs every login cookie and tenant link. Changing it logs everyone out and invalidates all links |
 | `NEXT_PUBLIC_APP_URL` | Public address of this app, used when creating tenant links |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Used only by `scripts/seed-admin.mts` to create the first admin |
@@ -25,7 +26,8 @@ cuts access immediately.
 
 Point Retell at `https://<your-domain>/api/webhooks/retell`. Requests are checked against the
 `x-retell-signature` header (`v={timestamp},d={digest}`, signed with the Retell API key) and rejected if the
-signature is wrong or older than 5 minutes.
+signature is wrong or older than 5 minutes. If Retell answers 401, check the Vercel logs for
+`[retell-webhook] rejected`: the reason says what is wrong.
 
 ## Getting Started
 

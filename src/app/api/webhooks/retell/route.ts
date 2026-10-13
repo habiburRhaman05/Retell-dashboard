@@ -7,9 +7,11 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get("x-retell-signature");
 
-  // Retell signs with the API key, not a separate secret. Check before touching
-  // the database so unsigned requests cannot write anything.
-  const check = checkRetellSignature(rawBody, signature, process.env.RETELL_API_KEY ?? "");
+  // Retell signs with the API key that carries the webhook badge. That is
+  // RETELL_API_KEY unless RETELL_WEBHOOK_KEY names a different badged key.
+  // Check before touching the database so unsigned requests cannot write anything.
+  const signingKey = process.env.RETELL_WEBHOOK_KEY?.trim() || process.env.RETELL_API_KEY || "";
+  const check = checkRetellSignature(rawBody, signature, signingKey);
   if (!check.ok) {
     // Visible in the host's logs so a 401 can be diagnosed. Never log the key or the signature.
     console.warn("[retell-webhook] rejected", { ...check, bodyBytes: rawBody.length });

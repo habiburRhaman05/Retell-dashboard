@@ -94,6 +94,27 @@ describe("POST /api/webhooks/retell", () => {
     expect(res.status).toBe(401);
   });
 
+  it("verifies with RETELL_WEBHOOK_KEY when it is set, and then no longer with the API key", async () => {
+    process.env.RETELL_WEBHOOK_KEY = "key_badged_webhook";
+    try {
+      const body = JSON.stringify({ event: "call_started", call: { call_id: "c1" } });
+      expect((await POST(makeRequest(body, sign(body, Date.now(), "key_badged_webhook")))).status).toBe(200);
+      expect((await POST(makeRequest(body, sign(body)))).status).toBe(401);
+    } finally {
+      delete process.env.RETELL_WEBHOOK_KEY;
+    }
+  });
+
+  it("ignores a blank RETELL_WEBHOOK_KEY and falls back to the API key", async () => {
+    process.env.RETELL_WEBHOOK_KEY = "   ";
+    try {
+      const body = JSON.stringify({ event: "call_started", call: { call_id: "c1" } });
+      expect((await POST(makeRequest(body, sign(body)))).status).toBe(200);
+    } finally {
+      delete process.env.RETELL_WEBHOOK_KEY;
+    }
+  });
+
   it("rejects everything when the API key is not configured", async () => {
     process.env.RETELL_API_KEY = " ";
     const body = JSON.stringify({ event: "call_ended", call: { call_id: "c1" } });

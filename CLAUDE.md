@@ -97,7 +97,7 @@ A task is not done until all of these are true:
 Verified in Retell docs (Oct 2026):
 - Webhook events include `call_started`, `call_ended`, `call_analyzed`, and chat equivalents. Signed with `x-retell-signature`. Retries up to 3 times, so duplicates happen.
 - The inbound call webhook can answer `{ "reject": true }` to hang up before any agent starts.
-- Webhook signature (verified Oct 2026): `x-retell-signature: v={timestamp_ms},d={hex}`, digest = HMAC-SHA256(rawBody + timestamp) keyed with the **API key that has the webhook badge** (no separate secret). Reject timestamps older than 5 minutes.
+- Webhook signature (verified Oct 2026): `x-retell-signature: v={timestamp_ms},d={hex}`, digest = HMAC-SHA256(rawBody + timestamp) keyed with the **API key that has the webhook badge** (no separate secret; set `RETELL_WEBHOOK_KEY` if that key differs from `RETELL_API_KEY`). Reject timestamps older than 5 minutes.
 - Legacy `GET /list-agents` and `GET /list-chat-agents` are retired. Use `POST /v2/list-agents` (query `limit`, `pagination_key`; body `filter_criteria.channel`). Items are summaries only (`agent_id`, `agent_name`, `channel`, `user_modified_timestamp`, `tags`); full settings need `get-agent` / `get-chat-agent`.
 
 NOT verified (confirm with a spike before relying on it):
