@@ -1,16 +1,37 @@
 @import "tailwindcss";
 
+/*
+ * Font tokens stay in `@theme inline`: they reference next/font's own CSS
+ * variables (--font-geist-sans/mono), which only exist via a className on
+ * <html>, and `inline` is what Tailwind needs to resolve that kind of
+ * external reference. Nothing else belongs in this block - inlining means
+ * "bake the final value into every utility at build time", which is the
+ * opposite of what a runtime-overridable token needs.
+ */
 @theme inline {
-  /*
-   * Brand ramp - sampled from the Bright AI Solutions host app
-   * (brand-500 = #1D6BF3, the exact pixel value of its active nav state).
-   * This is the ONE place the product's accent color is defined; every
-   * `brand-*` utility class (bg-brand-500, text-brand-600, ring-brand-500/20,
-   * etc.) derives from it. To re-theme the app, change only this block.
-   * Named "brand" rather than "accent" so it never collides with Tailwind's
-   * own `accent-*` utility (the CSS accent-color property, e.g. accent-brand-500
-   * on a range input).
-   */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/*
+ * Brand ramp - sampled from the Bright AI Solutions host app
+ * (brand-500 = #1D6BF3, the exact pixel value of its active nav state).
+ * This is the ONE place the product's accent color is defined; every
+ * `brand-*` utility class (bg-brand-500, text-brand-600, ring-brand-500/20,
+ * etc.) derives from it. To re-theme the app, change only this block.
+ * Named "brand" rather than "accent" so it never collides with Tailwind's
+ * own `accent-*` utility (the CSS accent-color property, e.g. accent-brand-500
+ * on a range input).
+ *
+ * Deliberately a plain (non-inline) @theme: Tailwind then emits utilities
+ * like `.bg-brand-500 { background-color: var(--color-brand-500) }` instead
+ * of baking in the literal hex, so per-tenant branding (src/lib/brand-theme.ts)
+ * can re-theme the whole app at runtime just by overriding these custom
+ * properties - no component changes, no rebuild. `@theme inline` above would
+ * silently break that: it bakes the resolved value into every utility at
+ * build time, so a runtime override would have nothing left to affect.
+ */
+@theme {
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;
   --color-brand-200: #bfdbfe;
@@ -52,8 +73,6 @@
   --color-danger: #e11d48;
   --color-danger-hover: #be123c;
   --color-danger-light: #fef2f2;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 html, body {
