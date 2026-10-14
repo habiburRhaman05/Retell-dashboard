@@ -18,8 +18,8 @@ const baseTenant = {
   status: "active",
   createdAt: "2026-10-01T00:00:00Z",
   agents: [
-    { id: "a1", retellAgentId: "ret_a1", name: "Bot - Acme Corp", createdAt: "2026-10-02T00:00:00Z", nameValid: true },
-    { id: "a2", retellAgentId: "ret_a2", name: "OldBot", createdAt: "2026-10-03T00:00:00Z", nameValid: false },
+    { id: "a1", retellAgentId: "ret_a1", name: "Bot - Acme Corp", createdAt: "2026-10-02T00:00:00Z" },
+    { id: "a2", retellAgentId: "ret_a2", name: "OldBot", createdAt: "2026-10-03T00:00:00Z" },
   ],
   knowledgeBases: [
     { id: "kb1", retellKbId: "ret_kb1", name: "FAQ - Acme Corp", createdAt: "2026-10-02T00:00:00Z" },
@@ -71,8 +71,7 @@ describe("TenantDetail", () => {
     await user.click(screen.getByText(/Agents/));
     expect(screen.getByText("Bot - Acme Corp")).toBeInTheDocument();
     expect(screen.getByText("OldBot")).toBeInTheDocument();
-    expect(screen.getByText("valid")).toBeInTheDocument();
-    expect(screen.getByText("needs fix")).toBeInTheDocument();
+    expect(screen.queryByText("Naming")).not.toBeInTheDocument();
   });
 
   it("switches to KB tab and shows knowledge bases", async () => {

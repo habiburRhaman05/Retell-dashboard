@@ -8,7 +8,6 @@ interface AgentRow {
   retellAgentId: string;
   name: string;
   createdAt: string;
-  nameValid: boolean;
 }
 
 interface KbRow {
@@ -346,7 +345,6 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Name</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Retell ID</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Naming</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Created</th>
                 </tr>
               </thead>
@@ -355,13 +353,6 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
                   <tr key={a.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{a.name}</td>
                     <td className="px-4 py-3 text-xs text-gray-400 font-mono">{a.retellAgentId}</td>
-                    <td className="px-4 py-3">
-                      {a.nameValid ? (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">valid</span>
-                      ) : (
-                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">needs fix</span>
-                      )}
-                    </td>
                     <td className="px-4 py-3 text-sm text-gray-500">{new Date(a.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}

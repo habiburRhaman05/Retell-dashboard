@@ -42,7 +42,6 @@ export default async function TenantDetailPage({
       retellAgentId: a.retellAgentId,
       name: a.agentName ?? "Unnamed",
       createdAt: a.createdAt.toISOString(),
-      nameValid: a.agentName?.endsWith(` - ${tenant.name}`) ?? false,
     })),
     knowledgeBases: knowledgeBases.map((kb) => ({
       id: kb.id,

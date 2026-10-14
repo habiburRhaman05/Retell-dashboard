@@ -1,0 +1,269 @@
+/* ============================================================
+   GHL WHITE-LABEL LOGIN PAGE
+   White card on dark background.
+   Accent color is set per-client via CSS variables below.
+   ============================================================ */
+
+/* ── Full-page dark background ── */
+.hl_login {
+  background-color: #1a1a2e !important;
+  background-image: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 100vh !important;
+  width: 100vw !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  overflow: auto !important;
+}
+
+/* ── Header / logo area ── */
+.hl_login--header {
+  background: transparent !important;
+  border-bottom: 0 !important;
+  padding: 0 !important;
+  margin-bottom: 24px !important;
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── White login card — centred ── */
+div.hl_login--body {
+  max-width: 440px !important;
+  width: 100% !important;
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.20) !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.hl_login--body .container-fluid {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0 !important;
+}
+
+.hl_login--body .card {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.hl_login--body .card .card-body {
+  padding: 40px 36px 44px !important;
+}
+
+/* ── Heading ── */
+.hl_login--body .heading2 {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+}
+
+/* ── Body text ── */
+.hl_login--body p,
+.hl_login--body label,
+.hl_login--body span {
+  color: #475569 !important;
+}
+
+/* ── Input fields ── */
+.hl_login .form-control {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  padding: 12px 14px !important;
+  color: #1e293b !important;
+  font-size: 0.95rem !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+}
+.hl_login .form-control::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* ── Default accent (fallback — neutral blue) ── */
+:root {
+  --login-accent:       #2563eb;
+  --login-accent-hover: #1d4ed8;
+}
+
+/* ── Submit / primary button ── */
+.hl_login .btn.btn-blue,
+.hl_login .btn.btn-blue:active,
+.hl_login .btn.btn-blue:focus,
+.hl_login button[type="submit"] {
+  background-color: var(--login-accent) !important;
+  border-color:     var(--login-accent) !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  min-height: 48px !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  width: 100% !important;
+  transition: background-color 0.18s ease, border-color 0.18s ease !important;
+}
+.hl_login .btn.btn-blue:hover,
+.hl_login button[type="submit"]:hover {
+  background-color: var(--login-accent-hover) !important;
+  border-color:     var(--login-accent-hover) !important;
+}
+
+/* ── Input focus ring ── */
+.hl_login .form-control:focus {
+  border-color: var(--login-accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--login-accent) 15%, transparent) !important;
+  outline: none !important;
+}
+
+/* ── Links ── */
+.hl_login a {
+  color: var(--login-accent) !important;
+  text-decoration: none !important;
+  transition: color 0.18s ease !important;
+}
+.hl_login a:hover {
+  color: var(--login-accent-hover) !important;
+  text-decoration: underline !important;
+}
+
+/* ============================================================
+   PER-CLIENT ACCENT OVERRIDES
+   GHL sets data-location-id on <body> for white-label logins.
+   ============================================================ */
+
+/* ── Bright AI Solutions — red ── */
+body[data-location-id="QUa0qSF6U3s7Jlwia2gX"],
+body.QUa0qSF6U3s7Jlwia2gX {
+  --login-accent:       #C0392B;
+  --login-accent-hover: #a93226;
+}
+
+/* ── Cassia Elegant Spa — dark red ── */
+body[data-location-id="rEo5zgOVFUKktLZZMJe2"],
+body.rEo5zgOVFUKktLZZMJe2 {
+  --login-accent:       #8B1A1A;
+  --login-accent-hover: #6d1414;
+}
+
+/* ── Bright Solutions — green ── */
+body[data-location-id="tWh67iVHHkSDby7bGdvW"],
+body.tWh67iVHHkSDby7bGdvW {
+  --login-accent:       #3A7A3A;
+  --login-accent-hover: #2e622e;
+}
+
+/* ── ADD NEW CLIENTS HERE ──────────────────────────────────
+body[data-location-id="NEW_LOCATION_ID"],
+body.NEW_LOCATION_ID {
+  --login-accent:       #your-color;
+  --login-accent-hover: #darker-shade;
+}
+─────────────────────────────────────────────────────────── */
+
+/* ── Responsive — narrow screens ── */
+@media (max-width: 480px) {
+  div.hl_login--body {
+    max-width: 95% !important;
+    border-radius: 10px !important;
+  }
+  .hl_login--body .card .card-body {
+    padding: 28px 20px 32px !important;
+  }
+}
+
+
+/* ============================================================
+   SIDEBAR — REORDER CUSTOM LINKS
+   Agency:       "Admin Dashboard"     → under Template Library
+   Sub-accounts: "AI Agents Dashboard" → under AI Studio (10th)
+                 (see the SUB-ACCOUNTS section further down)
+   GHL uses TWO sidebar wrappers: .hl_nav-header (agency) and
+   .hl_nav-header-without-footer (sub-account). Every rule below
+   targets both, via :is(...), so the same CSS works in both views.
+   The <nav> is NOT a direct child of the wrapper, so we use
+   descendant selectors (space), not child selectors (>).
+   ============================================================ */
+
+/* 1. Turn the sidebar nav into a flex column so `order` works */
+#sidebar-v2 :is(.hl_nav-header, .hl_nav-header-without-footer) nav {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* 2. Default order: every direct child of the nav (links AND divider
+      lines) keeps its normal position, up to the anchor item */
+#sidebar-v2 :is(.hl_nav-header, .hl_nav-header-without-footer) nav > * {
+  order: 1 !important;
+}
+
+/* 3. AGENCY — everything AFTER Template Library is pushed lower */
+#sidebar-v2 :is(.hl_nav-header, .hl_nav-header-without-footer) nav a[href*="template-li"] ~ * {
+  order: 3 !important;
+}
+
+/* 4. AGENCY — "Admin Dashboard" custom link → directly under Template Library.
+      `.custom-link` adds specificity so this beats rule 3. */
+#sidebar-v2 :is(.hl_nav-header, .hl_nav-header-without-footer) nav a.custom-link[meta="f8531f8d-d289-4b76-addf-c5bd2dd9da28"] {
+  order: 2 !important;
+}
+
+
+/* ============================================================
+   SUB-ACCOUNTS — "AI Agents Dashboard" → directly under AI Studio
+   Each sub-account has its OWN custom link id (the id and meta
+   attribute of the <a> are the same value):
+
+     • Bright Solutions     (tWh67iVHHkSDby7bGdvW) → e34fb0da-9091-4507-896f-b5470aaa4861
+     • Cassia Elegant Spa   (rEo5zgOVFUKktLZZMJe2) → eabf2418-0253-4af1-9486-d8293698bcd6
+     • Bright AI Solutions  (QUa0qSF6U3s7Jlwia2gX) → 4624bb62-fcb2-4dca-9756-900d03817c1f
+
+   No anchor on "AI Studio" is needed. The last 9 normal items
+   (AI Agents … App Marketplace) are pushed below the custom link,
+   counted from the END of the nav, which we confirmed in DevTools.
+   The `nav:has(…)` part makes this apply ONLY inside a nav that
+   contains one of these links, so the agency view is untouched.
+
+   NEW SUB-ACCOUNT? Add its link as one more [meta="…"] in all
+   three places marked  ← ADD HERE  (use the same value each time).
+   ============================================================ */
+
+/* S1. Make that nav a flex column so `order` works */
+#sidebar-v2 nav:has(> a.custom-link:is(
+  [meta="e34fb0da-9091-4507-896f-b5470aaa4861"],
+  [meta="eabf2418-0253-4af1-9486-d8293698bcd6"],
+  [meta="4624bb62-fcb2-4dca-9756-900d03817c1f"]
+  /* ← ADD HERE */
+)) {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* S2. Push the last 9 normal items (AI Agents … App Marketplace) lower.
+       :nth-last-of-type(-n+10) = the last 10 links, minus the custom link. */
+#sidebar-v2 nav:has(> a.custom-link:is(
+  [meta="e34fb0da-9091-4507-896f-b5470aaa4861"],
+  [meta="eabf2418-0253-4af1-9486-d8293698bcd6"],
+  [meta="4624bb62-fcb2-4dca-9756-900d03817c1f"]
+  /* ← ADD HERE */
+)) > a:nth-last-of-type(-n+10):not(.custom-link) {
+  order: 3 !important;
+}
+
+/* S3. The custom link itself sits between the two groups
+       (everything else stays at the default order 0 / 1 above it) */
+#sidebar-v2 nav > a.custom-link:is(
+  [meta="e34fb0da-9091-4507-896f-b5470aaa4861"],
+  [meta="eabf2418-0253-4af1-9486-d8293698bcd6"],
+  [meta="4624bb62-fcb2-4dca-9756-900d03817c1f"]
+  /* ← ADD HERE */
+) {
+  order: 2 !important;
+}
