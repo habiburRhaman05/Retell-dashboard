@@ -19,17 +19,17 @@ beforeEach(() => {
 describe("RegisterTenantPage", () => {
   it("renders form with all fields", () => {
     render(<RegisterTenantPage />);
-    expect(screen.getByText("Register New Tenant")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Tenant Name/)).toBeInTheDocument();
+    expect(screen.getByText("Register New Sub-Account")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Sub-Account Name/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Email/)).toBeInTheDocument();
     expect(screen.getByLabelText(/CRM Location ID/)).toBeInTheDocument();
-    expect(screen.getByText("Register Tenant")).toBeInTheDocument();
+    expect(screen.getByText("Register Sub-Account")).toBeInTheDocument();
   });
 
   it("shows agent name preview with typed name", async () => {
     const user = userEvent.setup();
     render(<RegisterTenantPage />);
-    await user.type(screen.getByLabelText(/Tenant Name/), "Acme");
+    await user.type(screen.getByLabelText(/Sub-Account Name/), "Acme");
     expect(screen.getByText(/Agent - Acme/)).toBeInTheDocument();
   });
 
@@ -41,15 +41,15 @@ describe("RegisterTenantPage", () => {
     });
 
     render(<RegisterTenantPage />);
-    await user.type(screen.getByLabelText(/Tenant Name/), "Acme Corp");
+    await user.type(screen.getByLabelText(/Sub-Account Name/), "Acme Corp");
     await user.type(screen.getByLabelText(/CRM Location ID/), "loc_1");
-    await user.click(screen.getByText("Register Tenant"));
+    await user.click(screen.getByText("Register Sub-Account"));
 
     await waitFor(() => {
-      expect(screen.getByText("Tenant Registered")).toBeInTheDocument();
+      expect(screen.getByText("Sub-Account Registered")).toBeInTheDocument();
     });
     expect(screen.getByText("Acme Corp")).toBeInTheDocument();
-    expect(screen.getByText("View Tenant")).toBeInTheDocument();
+    expect(screen.getByText("View Sub-Account")).toBeInTheDocument();
     expect(screen.getByText("Register Another")).toBeInTheDocument();
   });
 
@@ -61,9 +61,9 @@ describe("RegisterTenantPage", () => {
     });
 
     render(<RegisterTenantPage />);
-    await user.type(screen.getByLabelText(/Tenant Name/), "Bad");
+    await user.type(screen.getByLabelText(/Sub-Account Name/), "Bad");
     await user.type(screen.getByLabelText(/CRM Location ID/), "loc_2");
-    await user.click(screen.getByText("Register Tenant"));
+    await user.click(screen.getByText("Register Sub-Account"));
 
     await waitFor(() => {
       expect(screen.getByText("Registration failed")).toBeInTheDocument();
@@ -81,9 +81,9 @@ describe("RegisterTenantPage", () => {
     });
 
     render(<RegisterTenantPage />);
-    await user.type(screen.getByLabelText(/Tenant Name/), "x");
+    await user.type(screen.getByLabelText(/Sub-Account Name/), "x");
     await user.type(screen.getByLabelText(/CRM Location ID/), "loc_3");
-    await user.click(screen.getByText("Register Tenant"));
+    await user.click(screen.getByText("Register Sub-Account"));
 
     await waitFor(() => {
       expect(screen.getByText("Name is required")).toBeInTheDocument();
@@ -95,16 +95,16 @@ describe("RegisterTenantPage", () => {
     global.fetch = vi.fn().mockRejectedValue(new Error("Network"));
 
     render(<RegisterTenantPage />);
-    await user.type(screen.getByLabelText(/Tenant Name/), "Test");
+    await user.type(screen.getByLabelText(/Sub-Account Name/), "Test");
     await user.type(screen.getByLabelText(/CRM Location ID/), "loc_4");
-    await user.click(screen.getByText("Register Tenant"));
+    await user.click(screen.getByText("Register Sub-Account"));
 
     await waitFor(() => {
       expect(screen.getByText("Unable to connect. Please try again.")).toBeInTheDocument();
     });
   });
 
-  it("navigates to tenant on View Tenant click", async () => {
+  it("navigates to the sub-account on View Sub-Account click", async () => {
     const user = userEvent.setup();
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -112,14 +112,14 @@ describe("RegisterTenantPage", () => {
     });
 
     render(<RegisterTenantPage />);
-    await user.type(screen.getByLabelText(/Tenant Name/), "Acme");
+    await user.type(screen.getByLabelText(/Sub-Account Name/), "Acme");
     await user.type(screen.getByLabelText(/CRM Location ID/), "loc_5");
-    await user.click(screen.getByText("Register Tenant"));
+    await user.click(screen.getByText("Register Sub-Account"));
 
     await waitFor(() => {
-      expect(screen.getByText("View Tenant")).toBeInTheDocument();
+      expect(screen.getByText("View Sub-Account")).toBeInTheDocument();
     });
-    await user.click(screen.getByText("View Tenant"));
+    await user.click(screen.getByText("View Sub-Account"));
     expect(mockPush).toHaveBeenCalledWith("/admin/tenants/t1");
   });
 
@@ -131,16 +131,16 @@ describe("RegisterTenantPage", () => {
     });
 
     render(<RegisterTenantPage />);
-    await user.type(screen.getByLabelText(/Tenant Name/), "Beta");
+    await user.type(screen.getByLabelText(/Sub-Account Name/), "Beta");
     await user.type(screen.getByLabelText(/CRM Location ID/), "loc_6");
-    await user.click(screen.getByText("Register Tenant"));
+    await user.click(screen.getByText("Register Sub-Account"));
 
     await waitFor(() => {
       expect(screen.getByText("Register Another")).toBeInTheDocument();
     });
     await user.click(screen.getByText("Register Another"));
-    expect(screen.getByText("Register New Tenant")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Tenant Name/)).toHaveValue("");
+    expect(screen.getByText("Register New Sub-Account")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Sub-Account Name/)).toHaveValue("");
   });
 
   it("shows loading state during submission", async () => {
@@ -151,9 +151,9 @@ describe("RegisterTenantPage", () => {
     );
 
     render(<RegisterTenantPage />);
-    await user.type(screen.getByLabelText(/Tenant Name/), "Test");
+    await user.type(screen.getByLabelText(/Sub-Account Name/), "Test");
     await user.type(screen.getByLabelText(/CRM Location ID/), "loc_7");
-    await user.click(screen.getByText("Register Tenant"));
+    await user.click(screen.getByText("Register Sub-Account"));
 
     expect(screen.getByText("Registering...")).toBeInTheDocument();
     resolvePromise({ ok: true, json: async () => ({ id: "t3", name: "Test" }) });

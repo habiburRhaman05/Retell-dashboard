@@ -78,7 +78,7 @@ export function AuditLogView({
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Time</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Action</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actor</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Tenant</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Sub-Account</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Changes</th>
               </tr>
             </thead>

@@ -37,7 +37,7 @@ describe("TenantsTable", () => {
 
   it("shows empty state when no tenants", () => {
     render(<TenantsTable tenants={[]} />);
-    expect(screen.getByText("No tenants registered yet.")).toBeInTheDocument();
+    expect(screen.getByText("No sub-accounts registered yet.")).toBeInTheDocument();
   });
 
   it("filters by search text", async () => {
@@ -63,7 +63,7 @@ describe("TenantsTable", () => {
     render(<TenantsTable tenants={tenants} />);
     const search = screen.getByPlaceholderText(/Search/);
     await user.type(search, "zzzzzzz");
-    expect(screen.getByText("No tenants match your search.")).toBeInTheDocument();
+    expect(screen.getByText("No sub-accounts match your search.")).toBeInTheDocument();
   });
 
   it("shows agent and KB counts", () => {

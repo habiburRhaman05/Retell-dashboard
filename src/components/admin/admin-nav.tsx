@@ -14,7 +14,7 @@ interface NavLink {
 }
 
 const NAV_LINKS: NavLink[] = [
-  { label: "Tenants", href: "/admin", exact: true, icon: Users },
+  { label: "Sub-Accounts", href: "/admin", exact: true, icon: Users },
   { label: "Library", href: "/admin/library", icon: Library },
   { label: "Audit Log", href: "/admin/audit-log", icon: ScrollText },
 ];

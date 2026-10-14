@@ -54,7 +54,7 @@ export default function RegisterTenantPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Tenant Registered</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Sub-Account Registered</h2>
           <p className="text-gray-500 mb-6">
             <span className="font-medium text-gray-900">{success.name}</span> has been registered successfully.
           </p>
@@ -63,7 +63,7 @@ export default function RegisterTenantPage() {
               onClick={() => router.push(`/admin/tenants/${success.id}`)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
             >
-              View Tenant
+              View Sub-Account
             </button>
             <button
               onClick={() => {
@@ -92,18 +92,18 @@ export default function RegisterTenantPage() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to tenants
+          Back to sub-accounts
         </button>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Register New Tenant</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">Register New Sub-Account</h2>
         <p className="text-sm text-gray-500 mb-6">Create a sub-account for a new customer.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Tenant Name <span className="text-red-500">*</span>
+              Sub-Account Name <span className="text-red-500">*</span>
             </label>
             <input
               id="name"
@@ -119,7 +119,7 @@ export default function RegisterTenantPage() {
               <p className="text-xs text-red-600 mt-1">{fieldErrors.name[0]}</p>
             )}
             <p className="text-xs text-gray-400 mt-1">
-              This name will be appended to all agent names: &ldquo;Agent - {name || "Tenant Name"}&rdquo;
+              This name will be appended to all agent names: &ldquo;Agent - {name || "Sub-Account Name"}&rdquo;
             </p>
           </div>
 
@@ -170,7 +170,7 @@ export default function RegisterTenantPage() {
             disabled={loading}
             className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? "Registering..." : "Register Tenant"}
+            {loading ? "Registering..." : "Register Sub-Account"}
           </button>
         </form>
       </div>

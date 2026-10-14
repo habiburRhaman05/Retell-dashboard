@@ -58,14 +58,14 @@ export function TenantsTable({ tenants }: { tenants: TenantRow[] }) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Tenants</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Sub-Accounts</h2>
           <p className="text-sm text-gray-500 mt-0.5">{tenants.length} registered</p>
         </div>
         <Link
           href="/admin/tenants/new"
           className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
         >
-          Register Tenant
+          Register Sub-Account
         </Link>
       </div>
 
@@ -83,11 +83,11 @@ export function TenantsTable({ tenants }: { tenants: TenantRow[] }) {
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
           {tenants.length === 0 ? (
             <>
-              <p className="text-gray-500">No tenants registered yet.</p>
+              <p className="text-gray-500">No sub-accounts registered yet.</p>
               <p className="text-sm text-gray-400 mt-1">Click the button above to add your first sub-account.</p>
             </>
           ) : (
-            <p className="text-gray-500">No tenants match your search.</p>
+            <p className="text-gray-500">No sub-accounts match your search.</p>
           )}
         </div>
       ) : (

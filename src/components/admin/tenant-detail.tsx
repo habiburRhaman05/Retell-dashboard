@@ -251,7 +251,7 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to tenants
+          Back to sub-accounts
         </button>
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold text-gray-900">{tenant.name}</h2>
@@ -302,7 +302,7 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
       {tab === "info" && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-lg space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tenant Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sub-Account Name</label>
             <input
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
@@ -667,8 +667,8 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-sm font-semibold text-gray-900 mb-2">Dashboard Access</h3>
             <p className="text-sm text-gray-500 mb-3">
-              Tenants open their dashboard only through a signed link. Create one and paste it into this
-              tenant&apos;s CRM custom menu. The link opens this tenant&apos;s dashboard and nothing else.
+              Sub-accounts open their dashboard only through a signed link. Create one and paste it into
+              this sub-account&apos;s CRM custom menu. The link opens this sub-account&apos;s dashboard and nothing else.
             </p>
             <button
               onClick={generateLink}
