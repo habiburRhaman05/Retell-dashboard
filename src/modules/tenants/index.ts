@@ -4,6 +4,7 @@ export {
   registerTenant,
   listAllTenants,
   updateTenant,
+  updateTenantBranding,
   suspendTenant,
   reactivateTenant,
 } from "./service";
@@ -11,8 +12,10 @@ export {
 export {
   registerTenantSchema,
   updateTenantSchema,
+  updateBrandingSchema,
   type RegisterTenantInput,
   type UpdateTenantInput,
+  type UpdateBrandingInput,
 } from "./schemas";
 
 export { getLocationName } from "./repository";

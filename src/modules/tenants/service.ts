@@ -33,6 +33,13 @@ export async function updateTenant(
   return repo.updateTenant(id, data);
 }
 
+export async function updateTenantBranding(
+  id: string,
+  data: { brandPrimaryColor?: string | null; brandSecondaryColor?: string | null }
+) {
+  return repo.updateTenantBranding(id, data);
+}
+
 export async function suspendTenant(id: string) {
   return repo.updateTenant(id, { status: "suspended" });
 }

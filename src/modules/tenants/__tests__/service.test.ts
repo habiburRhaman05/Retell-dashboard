@@ -95,3 +95,23 @@ describe("reactivateTenant", () => {
     });
   });
 });
+
+describe("updateTenantBranding", () => {
+  it("writes both colors", async () => {
+    update.mockResolvedValue({ id: "t1", brandPrimaryColor: "#1d6bf3", brandSecondaryColor: "#1558d6" } as never);
+    await service.updateTenantBranding("t1", { brandPrimaryColor: "#1d6bf3", brandSecondaryColor: "#1558d6" });
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "t1" },
+      data: { brandPrimaryColor: "#1d6bf3", brandSecondaryColor: "#1558d6" },
+    });
+  });
+
+  it("clears a color by passing null", async () => {
+    update.mockResolvedValue({ id: "t1", brandPrimaryColor: null } as never);
+    await service.updateTenantBranding("t1", { brandPrimaryColor: null });
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "t1" },
+      data: { brandPrimaryColor: null },
+    });
+  });
+});

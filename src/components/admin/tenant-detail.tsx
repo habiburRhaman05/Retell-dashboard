@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { isValidHexColor } from "@/lib/brand-theme";
 
 interface AgentRow {
   id: string;
@@ -66,7 +67,7 @@ interface FeatureRow {
   changedAt: string;
 }
 
-type Tab = "info" | "agents" | "kb" | "access" | "usage" | "audit";
+type Tab = "info" | "agents" | "kb" | "access" | "branding" | "usage" | "audit";
 
 export function TenantDetail({ tenant }: { tenant: TenantData }) {
   const router = useRouter();
@@ -104,8 +105,13 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
     error: string;
     copied: boolean;
   }>({ url: "", loading: false, error: "", copied: false });
+  const [branding, setBranding] = useState({ primary: "", secondary: "" });
+  const [brandingLoading, setBrandingLoading] = useState(false);
+  const [brandingSaving, setBrandingSaving] = useState(false);
+  const [brandingMsg, setBrandingMsg] = useState("");
   const accessFetched = useRef(false);
   const usageFetched = useRef(false);
+  const brandingFetched = useRef(false);
 
   const fetchLimitsAndFeatures = useCallback(() => {
     if (accessFetched.current) return;
@@ -134,16 +140,34 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
       .catch(() => setUsageState({ data: null, loading: false, error: "Failed to load usage data" }));
   }, [tenant.id]);
 
+  const fetchBranding = useCallback(() => {
+    if (brandingFetched.current) return;
+    brandingFetched.current = true;
+    setBrandingLoading(true);
+    fetch(`/api/admin/tenants/${tenant.id}/branding`)
+      .then((r) => r.json())
+      .then((d) =>
+        setBranding({
+          primary: d.brandPrimaryColor ?? "",
+          secondary: d.brandSecondaryColor ?? "",
+        })
+      )
+      .catch(() => {})
+      .finally(() => setBrandingLoading(false));
+  }, [tenant.id]);
+
   useEffect(() => {
     if (tab === "access") fetchLimitsAndFeatures();
     if (tab === "usage") fetchUsage();
-  }, [tab, fetchLimitsAndFeatures, fetchUsage]);
+    if (tab === "branding") fetchBranding();
+  }, [tab, fetchLimitsAndFeatures, fetchUsage, fetchBranding]);
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
     { key: "agents", label: "Agents", count: tenant.agents.length },
     { key: "kb", label: "Knowledge Bases", count: tenant.knowledgeBases.length },
     { key: "access", label: "Access" },
+    { key: "branding", label: "Branding" },
     { key: "usage", label: "Usage" },
     { key: "audit", label: "Audit Log", count: tenant.auditLogs.length },
   ];
@@ -215,6 +239,31 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
       setDisableConfirmText("");
     } finally {
       setDisableSaving(false);
+    }
+  }
+
+  async function saveBranding() {
+    setBrandingSaving(true);
+    setBrandingMsg("");
+    try {
+      const res = await fetch(`/api/admin/tenants/${tenant.id}/branding`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brandPrimaryColor: branding.primary || null,
+          brandSecondaryColor: branding.secondary || null,
+        }),
+      });
+      if (res.ok) {
+        setBrandingMsg("Saved");
+      } else {
+        const data = await res.json();
+        setBrandingMsg(data.error ?? "Save failed");
+      }
+    } catch {
+      setBrandingMsg("Connection error");
+    } finally {
+      setBrandingSaving(false);
     }
   }
 
@@ -695,6 +744,105 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {tab === "branding" && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-lg">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">Brand Colors</h3>
+          <p className="text-sm text-gray-500 mb-5">
+            Re-themes this sub-account&apos;s dashboard. Leave a field blank to use the app default.
+          </p>
+
+          {brandingLoading ? (
+            <p className="text-sm text-gray-500">Loading...</p>
+          ) : (
+            <div className="space-y-4">
+              {brandingMsg && (
+                <p
+                  className={`text-sm p-3 rounded-lg ${
+                    brandingMsg === "Saved" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+                  }`}
+                >
+                  {brandingMsg}
+                </p>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Primary Color</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={isValidHexColor(branding.primary) ? branding.primary : "#1d6bf3"}
+                    onChange={(e) => setBranding((b) => ({ ...b, primary: e.target.value }))}
+                    aria-label="Primary color swatch"
+                    className="w-10 h-10 rounded-lg border border-gray-300 cursor-pointer shrink-0"
+                  />
+                  <input
+                    type="text"
+                    value={branding.primary}
+                    onChange={(e) => setBranding((b) => ({ ...b, primary: e.target.value }))}
+                    placeholder="#1d6bf3 (default)"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                {branding.primary && !isValidHexColor(branding.primary) && (
+                  <p className="text-xs text-red-600 mt-1">Must be a 6-digit hex color, e.g. #1d6bf3</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Secondary Color <span className="text-gray-400 font-normal">(hover / active state)</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={
+                      isValidHexColor(branding.secondary)
+                        ? branding.secondary
+                        : isValidHexColor(branding.primary)
+                        ? branding.primary
+                        : "#1558d6"
+                    }
+                    onChange={(e) => setBranding((b) => ({ ...b, secondary: e.target.value }))}
+                    aria-label="Secondary color swatch"
+                    className="w-10 h-10 rounded-lg border border-gray-300 cursor-pointer shrink-0"
+                  />
+                  <input
+                    type="text"
+                    value={branding.secondary}
+                    onChange={(e) => setBranding((b) => ({ ...b, secondary: e.target.value }))}
+                    placeholder="Auto-derived from primary"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                {branding.secondary && !isValidHexColor(branding.secondary) && (
+                  <p className="text-xs text-red-600 mt-1">Must be a 6-digit hex color, e.g. #1558d6</p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  onClick={saveBranding}
+                  disabled={
+                    brandingSaving ||
+                    (!!branding.primary && !isValidHexColor(branding.primary)) ||
+                    (!!branding.secondary && !isValidHexColor(branding.secondary))
+                  }
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {brandingSaving ? "Saving..." : "Save Branding"}
+                </button>
+                <button
+                  onClick={() => setBranding({ primary: "", secondary: "" })}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                >
+                  Reset to Default
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

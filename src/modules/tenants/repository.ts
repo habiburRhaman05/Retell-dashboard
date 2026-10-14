@@ -47,6 +47,13 @@ export async function updateTenant(
   return tenant;
 }
 
+export async function updateTenantBranding(
+  id: string,
+  data: { brandPrimaryColor?: string | null; brandSecondaryColor?: string | null }
+) {
+  return prisma.tenant.update({ where: { id }, data });
+}
+
 export async function getLocationName(locationId: string): Promise<string | null> {
   const loc = await prisma.location.findUnique({
     where: { locationId },

@@ -1,4 +1,5 @@
 import { LocationProvider } from "@/providers/location-provider";
+import { BrandingEffect } from "@/providers/branding-effect";
 import { ToastProvider } from "@/components/layout/toast";
 import { TopNavbar } from "@/components/layout/top-navbar";
 import { TenantGate } from "@/components/auth/tenant-gate";
@@ -17,6 +18,7 @@ export default async function LocationLayout({
     <TenantGate locationId={locationId}>
       <LocationProvider locationId={locationId}>
         <ToastProvider>
+          <BrandingEffect locationId={locationId} />
           <div className="h-full flex flex-col">
             <TopNavbar />
             <main className="flex-1 overflow-auto">

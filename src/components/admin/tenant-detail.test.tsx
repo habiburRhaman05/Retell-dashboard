@@ -53,6 +53,7 @@ describe("TenantDetail", () => {
     expect(screen.getByText(/Agents/)).toBeInTheDocument();
     expect(screen.getByText(/Knowledge Bases/)).toBeInTheDocument();
     expect(screen.getByText("Access")).toBeInTheDocument();
+    expect(screen.getByText("Branding")).toBeInTheDocument();
     expect(screen.getByText(/Audit Log/)).toBeInTheDocument();
   });
 
@@ -241,6 +242,110 @@ describe("TenantDetail", () => {
 
     render(<TenantDetail tenant={baseTenant} />);
     await user.click(screen.getByText("Save Changes"));
+    expect(await screen.findByText("Connection error")).toBeInTheDocument();
+  });
+});
+
+describe("TenantDetail - Branding tab", () => {
+  it("shows a loading state then the fetched colors", async () => {
+    const user = userEvent.setup();
+    let resolveFetch!: (value: unknown) => void;
+    global.fetch = vi.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve; }));
+
+    render(<TenantDetail tenant={baseTenant} />);
+    await user.click(screen.getByText("Branding"));
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
+
+    resolveFetch({
+      ok: true,
+      json: async () => ({ brandPrimaryColor: "#1d6bf3", brandSecondaryColor: "#1558d6" }),
+    });
+
+    expect(await screen.findByPlaceholderText("#1d6bf3 (default)")).toHaveValue("#1d6bf3");
+    expect(screen.getByPlaceholderText("Auto-derived from primary")).toHaveValue("#1558d6");
+  });
+
+  it("shows empty fields when the sub-account has no custom branding", async () => {
+    const user = userEvent.setup();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ brandPrimaryColor: null, brandSecondaryColor: null }),
+    });
+
+    render(<TenantDetail tenant={baseTenant} />);
+    await user.click(screen.getByText("Branding"));
+    expect(await screen.findByPlaceholderText("#1d6bf3 (default)")).toHaveValue("");
+    expect(screen.getByPlaceholderText("Auto-derived from primary")).toHaveValue("");
+  });
+
+  it("saves the colors and shows a success message", async () => {
+    const user = userEvent.setup();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ brandPrimaryColor: null, brandSecondaryColor: null }),
+    });
+
+    render(<TenantDetail tenant={baseTenant} />);
+    await user.click(screen.getByText("Branding"));
+    const primaryInput = await screen.findByPlaceholderText("#1d6bf3 (default)");
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ brandPrimaryColor: "#3a7a3a", brandSecondaryColor: null }),
+    });
+    await user.type(primaryInput, "#3a7a3a");
+    await user.click(screen.getByText("Save Branding"));
+
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+  });
+
+  it("shows a validation message and disables Save for an invalid hex color", async () => {
+    const user = userEvent.setup();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ brandPrimaryColor: null, brandSecondaryColor: null }),
+    });
+
+    render(<TenantDetail tenant={baseTenant} />);
+    await user.click(screen.getByText("Branding"));
+    const primaryInput = await screen.findByPlaceholderText("#1d6bf3 (default)");
+    await user.type(primaryInput, "not-a-color");
+
+    expect(screen.getByText("Must be a 6-digit hex color, e.g. #1d6bf3")).toBeInTheDocument();
+    expect(screen.getByText("Save Branding")).toBeDisabled();
+  });
+
+  it("clears both fields on Reset to Default", async () => {
+    const user = userEvent.setup();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ brandPrimaryColor: "#1d6bf3", brandSecondaryColor: "#1558d6" }),
+    });
+
+    render(<TenantDetail tenant={baseTenant} />);
+    await user.click(screen.getByText("Branding"));
+    expect(await screen.findByPlaceholderText("#1d6bf3 (default)")).toHaveValue("#1d6bf3");
+
+    await user.click(screen.getByText("Reset to Default"));
+
+    expect(screen.getByPlaceholderText("#1d6bf3 (default)")).toHaveValue("");
+    expect(screen.getByPlaceholderText("Auto-derived from primary")).toHaveValue("");
+  });
+
+  it("shows a connection error on save failure", async () => {
+    const user = userEvent.setup();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ brandPrimaryColor: null, brandSecondaryColor: null }),
+    });
+
+    render(<TenantDetail tenant={baseTenant} />);
+    await user.click(screen.getByText("Branding"));
+    await screen.findByPlaceholderText("#1d6bf3 (default)");
+
+    global.fetch = vi.fn().mockRejectedValue(new Error("Network"));
+    await user.click(screen.getByText("Save Branding"));
+
     expect(await screen.findByText("Connection error")).toBeInTheDocument();
   });
 });

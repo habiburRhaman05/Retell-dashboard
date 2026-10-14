@@ -126,6 +126,11 @@ model Tenant {
   email           String?
   status          TenantStatus @default(active)
   retellWorkspace String?      @map("retell_workspace")
+  // Admin-set brand colors (6-digit hex, e.g. "#1d6bf3"). Null = default blue.
+  // brandSecondaryColor only overrides the hover/active shade; everything
+  // else in the color scale is derived from brandPrimaryColor.
+  brandPrimaryColor   String?  @map("brand_primary_color")
+  brandSecondaryColor String?  @map("brand_secondary_color")
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
