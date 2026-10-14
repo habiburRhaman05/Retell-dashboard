@@ -274,12 +274,16 @@ export async function listCalls(
 
 /**
  * Full detail for one call: transcript, recording URL(s), AI analysis,
- * metadata/dynamic variables. list-calls items omit most of this (verified
- * against Retell's docs, Oct 2026), so the call-history detail view always
- * fetches this separately rather than relying on the list response.
+ * metadata/dynamic variables. list-calls items omit most of this, so the
+ * call-history detail view always fetches this separately rather than
+ * relying on the list response.
+ *
+ * The path is GET /v2/get-call/{id} - verified directly against the live
+ * API (Oct 2026); Retell's docs page described /v1/get-call/{id}, which
+ * 404s (generic HTML, not a JSON "not found"), so the docs are stale here.
  */
 export async function getCall(callId: string): Promise<RetellCall> {
-  return retellFetch<RetellCall>(`/v1/get-call/${callId}`);
+  return retellFetch<RetellCall>(`/v2/get-call/${callId}`);
 }
 
 /**

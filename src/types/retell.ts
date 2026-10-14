@@ -321,9 +321,9 @@ export interface CallCost {
   combined_cost: number;
 }
 
-// One turn of a call transcript (GET /v1/get-call/{id} -> transcript_object).
-// Verified against Retell's docs Oct 2026; `words` carries per-word timestamps
-// but callers of this type generally only need role/content.
+// One turn of a call transcript (GET /v2/get-call/{id} -> transcript_object).
+// `words` carries per-word timestamps but callers of this type generally only
+// need role/content.
 export interface TranscriptUtterance {
   role: string;
   content: string;
@@ -374,8 +374,7 @@ export interface RetellCall {
   };
   llm_token_usage?: LlmTokenUsage;
   call_cost?: CallCost;
-  // Only reliably present on GET /v1/get-call/{id}, not on list-calls items
-  // (Retell's own docs note the list response omits these - verified Oct 2026).
+  // Only reliably present on GET /v2/get-call/{id}, not on list-calls items.
   transcript?: string;
   transcript_object?: TranscriptUtterance[];
   recording_url?: string;
