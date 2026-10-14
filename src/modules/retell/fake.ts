@@ -6,6 +6,7 @@ import type {
   RetellVoice,
   ListCallsResponse,
   ListCallsRequest,
+  RetellCall,
 } from "@/types/retell";
 
 export class FakeRetell {
@@ -14,7 +15,7 @@ export class FakeRetell {
   llms = new Map<string, RetellLlm>();
   knowledgeBases = new Map<string, KnowledgeBase>();
   voices: RetellVoice[] = [];
-  calls: Array<{ call_id: string; agent_id: string; duration_sec: number }> = [];
+  calls: RetellCall[] = [];
 
   private nextId = 1;
   private id(prefix: string) {
@@ -129,8 +130,30 @@ export class FakeRetell {
     } as CreateWebCallResponse;
   }
 
-  async listCalls(_body: ListCallsRequest): Promise<ListCallsResponse> {
-    return { calls_list: [], has_more: false } as unknown as ListCallsResponse;
+  async listCalls(body: ListCallsRequest): Promise<ListCallsResponse> {
+    const agentIds = body.filter_criteria?.agent?.map((a) => a.agent_id);
+    const filtered = agentIds
+      ? this.calls.filter((c) => agentIds.includes(c.agent_id))
+      : this.calls;
+    const limit = body.limit ?? 50;
+    const skip = body.skip ?? 0;
+    const page = filtered.slice(skip, skip + limit);
+    return {
+      items: page,
+      has_more: skip + limit < filtered.length,
+      pagination_key: null,
+      ...(body.include_total ? { total: filtered.length } : {}),
+    };
+  }
+
+  async getCall(callId: string): Promise<RetellCall> {
+    const call = this.calls.find((c) => c.call_id === callId);
+    if (!call) throw Object.assign(new Error("Call not found"), { status: 404 });
+    return call;
+  }
+
+  async fetchPublicLog(_url: string): Promise<string> {
+    return "";
   }
 }
 

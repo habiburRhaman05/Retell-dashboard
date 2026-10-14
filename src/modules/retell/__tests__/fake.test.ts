@@ -81,6 +81,42 @@ describe("FakeRetell", () => {
     });
   });
 
+  describe("calls", () => {
+    it("lists calls filtered by agent", async () => {
+      fake.calls = [
+        { call_id: "call_1", agent_id: "a1", call_status: "ended", call_type: "web_call" } as never,
+        { call_id: "call_2", agent_id: "a2", call_status: "ended", call_type: "web_call" } as never,
+      ];
+      const res = await fake.listCalls({ filter_criteria: { agent: [{ agent_id: "a1" }] } });
+      expect(res.items).toHaveLength(1);
+      expect(res.items[0].call_id).toBe("call_1");
+      expect(res.has_more).toBe(false);
+    });
+
+    it("paginates with limit and skip", async () => {
+      fake.calls = Array.from({ length: 5 }, (_, i) => ({
+        call_id: `call_${i}`,
+        agent_id: "a1",
+        call_status: "ended",
+        call_type: "web_call",
+      })) as never;
+      const res = await fake.listCalls({ limit: 2, skip: 2 });
+      expect(res.items).toHaveLength(2);
+      expect(res.items[0].call_id).toBe("call_2");
+      expect(res.has_more).toBe(true);
+    });
+
+    it("gets a call by id", async () => {
+      fake.calls = [{ call_id: "call_1", agent_id: "a1", call_status: "ended", call_type: "web_call" } as never];
+      const call = await fake.getCall("call_1");
+      expect(call.call_id).toBe("call_1");
+    });
+
+    it("throws 404 for missing call", async () => {
+      await expect(fake.getCall("nonexistent")).rejects.toThrow("Call not found");
+    });
+  });
+
   describe("reset", () => {
     it("clears all data", async () => {
       await fake.createAgent({ agent_name: "A" });

@@ -10,6 +10,7 @@ import {
   Bot,
   BookOpen,
   BarChart3,
+  History,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,12 @@ const NAV_LINKS: NavLink[] = [
     href: (loc) => `/retell/${loc}/knowledge-base`,
     exactMatch: true,
     icon: BookOpen,
+  },
+  {
+    label: "Call History",
+    href: (loc) => `/retell/${loc}/calls`,
+    exactMatch: true,
+    icon: History,
   },
   {
     label: "Analytics",

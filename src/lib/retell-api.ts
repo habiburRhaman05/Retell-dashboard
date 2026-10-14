@@ -9,6 +9,7 @@ import type {
   RetellVoice,
   ListCallsRequest,
   ListCallsResponse,
+  RetellCall,
 } from "@/types/retell";
 
 const RETELL_BASE_URL = "https://api.retellai.com";
@@ -269,6 +270,28 @@ export async function listCalls(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+/**
+ * Full detail for one call: transcript, recording URL(s), AI analysis,
+ * metadata/dynamic variables. list-calls items omit most of this (verified
+ * against Retell's docs, Oct 2026), so the call-history detail view always
+ * fetches this separately rather than relying on the list response.
+ */
+export async function getCall(callId: string): Promise<RetellCall> {
+  return retellFetch<RetellCall>(`/v1/get-call/${callId}`);
+}
+
+/**
+ * Fetches the raw text of a call's public_log_url (a plain file Retell
+ * hosts, not an api.retellai.com endpoint - no Authorization header). Kept
+ * here, not in a route handler, so this stays the one place that talks to
+ * anything Retell-hosted (CLAUDE.md rule: only modules/retell calls Retell).
+ */
+export async function fetchPublicLog(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new RetellApiError(res.status, await res.text());
+  return res.text();
 }
 
 export async function getRetellLlm(llmId: string): Promise<RetellLlm> {

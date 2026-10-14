@@ -321,13 +321,42 @@ export interface CallCost {
   combined_cost: number;
 }
 
+// One turn of a call transcript (GET /v1/get-call/{id} -> transcript_object).
+// Verified against Retell's docs Oct 2026; `words` carries per-word timestamps
+// but callers of this type generally only need role/content.
+export interface TranscriptUtterance {
+  role: string;
+  content: string;
+  words?: { word: string; start: number; end: number }[];
+}
+
+// Known disconnection_reason values (Retell docs, verified Oct 2026). Kept as
+// `string` below rather than this union so a reason Retell adds later never
+// breaks decoding - this list is for reference/UI labeling only.
+export type DisconnectionReason =
+  | "user_hangup" | "agent_hangup" | "user_requested_dnc" | "user_requested_callback"
+  | "call_transfer" | "voicemail_reached" | "ivr_reached" | "inactivity"
+  | "max_duration_reached" | "concurrency_limit_reached" | "no_concurrency_fallback"
+  | "no_valid_payment" | "credit_exhausted" | "budget_reached" | "scam_detected"
+  | "dial_busy" | "dial_failed" | "dial_no_answer" | "invalid_destination"
+  | "telephony_provider_permission_denied" | "telephony_provider_unavailable"
+  | "sip_routing_error" | "marked_as_spam" | "network_blocked" | "user_declined"
+  | "error_llm_websocket_open" | "error_llm_websocket_lost_connection"
+  | "error_llm_websocket_runtime" | "error_llm_websocket_corrupt_payload"
+  | "error_no_audio_received" | "error_asr" | "error_retell" | "error_unknown"
+  | "error_user_not_joined" | "registered_call_timeout" | "transfer_bridged"
+  | "transfer_cancelled" | "manual_stopped" | "call_take_over";
+
 export interface RetellCall {
   call_id: string;
   agent_id: string;
   agent_name?: string;
+  agent_version?: number;
   call_status: CallStatus;
   call_type: CallType;
   direction?: CallDirection;
+  from_number?: string;
+  to_number?: string;
   start_timestamp?: number;
   end_timestamp?: number;
   duration_ms?: number;
@@ -345,6 +374,16 @@ export interface RetellCall {
   };
   llm_token_usage?: LlmTokenUsage;
   call_cost?: CallCost;
+  // Only reliably present on GET /v1/get-call/{id}, not on list-calls items
+  // (Retell's own docs note the list response omits these - verified Oct 2026).
+  transcript?: string;
+  transcript_object?: TranscriptUtterance[];
+  recording_url?: string;
+  recording_multi_channel_url?: string;
+  public_log_url?: string;
+  metadata?: Record<string, unknown>;
+  retell_llm_dynamic_variables?: Record<string, string>;
+  collected_dynamic_variables?: Record<string, string>;
   [key: string]: unknown;
 }
 
@@ -355,21 +394,31 @@ export interface RangeFilter {
 }
 
 export interface ListCallsFilterCriteria {
-  agent?: { agent_id: string }[];
+  agent?: { agent_id: string; version?: number[] }[];
   start_timestamp?: RangeFilter;
+  call_status?: CallStatus[];
+  call_type?: CallType[];
+  direction?: CallDirection[];
+  disconnection_reason?: string[];
+  user_sentiment?: UserSentiment[];
+  call_successful?: boolean;
+  in_voicemail?: boolean;
 }
 
 export interface ListCallsRequest {
   filter_criteria?: ListCallsFilterCriteria;
   sort_order?: "ascending" | "descending";
   limit?: number;
+  skip?: number;
   pagination_key?: string;
+  include_total?: boolean;
 }
 
 export interface ListCallsResponse {
   has_more: boolean;
   pagination_key: string | null;
   items: RetellCall[];
+  total?: number;
 }
 
 export interface AnalyticsSummary {
