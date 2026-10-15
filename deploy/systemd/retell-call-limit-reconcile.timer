@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Retell call limit reconciliation hourly
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5m
+Persistent=true
+Unit=retell-call-limit-reconcile.service
+
+[Install]
+WantedBy=timers.target

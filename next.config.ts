@@ -7,6 +7,7 @@ const ADMIN_FRAME_ANCESTORS =
   "https://app.gohighlevel.com https://*.gohighlevel.com https://*.leadconnectorhq.com";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   async headers() {
     return [
       {

@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/internal/jobs/reconcile-call-limits",
-      "schedule": "15 * * * *"
-    }
-  ]
-}

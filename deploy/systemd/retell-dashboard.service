@@ -1,0 +1,27 @@
+[Unit]
+Description=Retell Dashboard Next.js application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=retell-dashboard
+Group=retell-dashboard
+WorkingDirectory=/opt/retell-dashboard
+EnvironmentFile=/etc/retell-dashboard.env
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=PORT=3000
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/retell-dashboard/.next/cache
+
+[Install]
+WantedBy=multi-user.target
