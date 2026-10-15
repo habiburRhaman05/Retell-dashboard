@@ -429,6 +429,9 @@ export function AdminLibrary() {
                 )}
                 <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase">Sub-Account</th>
+                {tab === "agents" && (
+                  <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase">Phone Number</th>
+                )}
                 <th className="px-4 py-3 text-xs font-medium text-gray-500 uppercase w-10">ID</th>
               </tr>
             </thead>
@@ -517,6 +520,15 @@ function AgentRow({
         ) : (
           <span className="text-xs text-gray-400">-</span>
         )}
+      </td>
+      <td className="px-4 py-3">
+        <span className="text-xs text-gray-600">
+          {agent.connectedPhoneNumbers === null
+            ? "Unavailable"
+            : agent.connectedPhoneNumbers?.length
+              ? agent.connectedPhoneNumbers.join(", ")
+              : "Not connected"}
+        </span>
       </td>
       <td className="px-4 py-3">
         <span className="text-[10px] text-gray-400 font-mono">{agent.agentId.slice(0, 12)}...</span>

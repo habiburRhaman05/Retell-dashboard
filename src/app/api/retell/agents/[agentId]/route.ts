@@ -35,7 +35,14 @@ async function handleGET(
 
   try {
     const agent = await retell.getAnyAgent(agentId);
-    return NextResponse.json(agent);
+    let connectedPhoneNumbers: string[] | null = null;
+    try {
+      const phoneNumbers = await retell.listPhoneNumbers();
+      connectedPhoneNumbers = retell.connectedPhoneNumbersByAgent(phoneNumbers).get(agentId) ?? [];
+    } catch {
+      // Do not make agent editing unavailable if the optional phone lookup fails.
+    }
+    return NextResponse.json({ ...agent, connected_phone_numbers: connectedPhoneNumbers });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to fetch agent";

@@ -13,6 +13,7 @@ import {
   Globe,
   Clock,
   ArrowUpRight,
+  Phone,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { languagesLabel } from "@/lib/languages";
@@ -99,6 +100,16 @@ export function AgentCard({
           </div>
 
           <div className="hidden lg:flex items-center gap-5 text-xs text-gray-500 shrink-0">
+            <span className="inline-flex items-center gap-1.5 max-w-64">
+              <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <span className="truncate">
+                {agent.connected_phone_numbers === null
+                  ? "Numbers unavailable"
+                  : agent.connected_phone_numbers?.length
+                    ? agent.connected_phone_numbers.join(", ")
+                    : "No number"}
+              </span>
+            </span>
             {agent.channel !== "chat" && (
               <span className="inline-flex items-center gap-1.5">
                 <Volume2 className="w-3.5 h-3.5 text-gray-400" />
@@ -167,6 +178,15 @@ export function AgentCard({
         </div>
 
         <div className="space-y-2.5 mb-4">
+          <InfoRow
+            icon={Phone}
+            label="Number"
+            value={agent.connected_phone_numbers === null
+              ? "Unavailable"
+              : agent.connected_phone_numbers?.length
+                ? agent.connected_phone_numbers.join(", ")
+                : "Not connected"}
+          />
           {agent.channel !== "chat" && (
             <InfoRow icon={Volume2} label="Voice" value={getVoiceLabel(agent.voice_id)} />
           )}

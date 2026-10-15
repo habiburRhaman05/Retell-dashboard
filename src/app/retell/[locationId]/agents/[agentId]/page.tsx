@@ -431,6 +431,15 @@ export default function AgentDetailPage() {
               </div>
               <p className="text-[12px] text-gray-500 mt-0.5">
                 Modified {timeAgo(agent.last_modification_timestamp)}
+                <span className="mx-2 text-gray-300">·</span>
+                <span className="inline-flex items-center gap-1">
+                  <Phone className="w-3 h-3" />
+                  {agent.connected_phone_numbers === null
+                    ? "Numbers unavailable"
+                    : agent.connected_phone_numbers?.length
+                      ? agent.connected_phone_numbers.join(", ")
+                      : "No connected number"}
+                </span>
               </p>
             </div>
 

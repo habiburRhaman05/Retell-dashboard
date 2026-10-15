@@ -9,6 +9,7 @@ interface AgentRow {
   retellAgentId: string;
   name: string;
   createdAt: string;
+  connectedPhoneNumbers?: string[] | null;
 }
 
 interface KbRow {
@@ -394,6 +395,7 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Name</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Retell ID</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Phone Number</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Created</th>
                 </tr>
               </thead>
@@ -402,6 +404,13 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
                   <tr key={a.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{a.name}</td>
                     <td className="px-4 py-3 text-xs text-gray-400 font-mono">{a.retellAgentId}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {a.connectedPhoneNumbers === null
+                        ? "Unavailable"
+                        : a.connectedPhoneNumbers?.length
+                          ? a.connectedPhoneNumbers.join(", ")
+                          : "Not connected"}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-500">{new Date(a.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}

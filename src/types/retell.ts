@@ -151,6 +151,8 @@ export interface RetellAgent {
   data_storage_retention_days?: number | null;
   opt_in_signed_url?: boolean;
   last_modification_timestamp: number;
+  /** Phone numbers whose Retell routing configuration includes this agent. */
+  connected_phone_numbers?: string[] | null;
   [key: string]: unknown;
 }
 

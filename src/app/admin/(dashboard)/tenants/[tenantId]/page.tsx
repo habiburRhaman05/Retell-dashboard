@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { TenantDetail } from "@/components/admin/tenant-detail";
+import * as retell from "@/lib/retell-api";
 
 export default async function TenantDetailPage({
   params,
@@ -14,7 +15,7 @@ export default async function TenantDetailPage({
   });
   if (!tenant) notFound();
 
-  const [agents, knowledgeBases, recentAudit] = await Promise.all([
+  const [agents, knowledgeBases, recentAudit, phoneNumbers] = await Promise.all([
     prisma.locationAgent.findMany({
       where: { locationId: tenant.crmLocationId },
       orderBy: { createdAt: "desc" },
@@ -28,7 +29,12 @@ export default async function TenantDetailPage({
       orderBy: { createdAt: "desc" },
       take: 20,
     }),
+    retell.listPhoneNumbers().catch(() => null),
   ]);
+
+  const numberMap = phoneNumbers
+    ? retell.connectedPhoneNumbersByAgent(phoneNumbers)
+    : null;
 
   const data = {
     id: tenant.id,
@@ -42,6 +48,7 @@ export default async function TenantDetailPage({
       retellAgentId: a.retellAgentId,
       name: a.agentName ?? "Unnamed",
       createdAt: a.createdAt.toISOString(),
+      connectedPhoneNumbers: numberMap ? numberMap.get(a.retellAgentId) ?? [] : null,
     })),
     knowledgeBases: knowledgeBases.map((kb) => ({
       id: kb.id,

@@ -15,6 +15,7 @@ export interface AgentLibraryItem {
   status: AssignmentStatus;
   locationId: string | null;
   assignedBy: string | null;
+  connectedPhoneNumbers?: string[] | null;
 }
 
 export interface KbLibraryItem {

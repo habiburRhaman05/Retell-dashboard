@@ -79,6 +79,57 @@ export interface AgentSummary {
   last_modification_timestamp: number;
 }
 
+export interface RetellPhoneNumberSummary {
+  phone_number: string;
+  phone_number_pretty?: string | null;
+  inbound_agents?: { agent_id: string }[] | null;
+  outbound_agents?: { agent_id: string }[] | null;
+  inbound_sms_agents?: { agent_id: string }[] | null;
+  outbound_sms_agents?: { agent_id: string }[] | null;
+}
+
+interface PhoneNumberListPage {
+  items?: RetellPhoneNumberSummary[];
+  has_more?: boolean;
+  pagination_key?: string;
+}
+
+/** Phone number bindings across voice, chat/SMS, inbound, and outbound routing. */
+export async function listPhoneNumbers(): Promise<RetellPhoneNumberSummary[]> {
+  const numbers: RetellPhoneNumberSummary[] = [];
+  let paginationKey: string | undefined;
+  for (let page = 0; page < 50; page++) {
+    const params = new URLSearchParams({ limit: "1000" });
+    if (paginationKey) params.set("pagination_key", paginationKey);
+    const res = await retellFetch<PhoneNumberListPage>(`/v2/list-phone-numbers?${params}`);
+    numbers.push(...(res.items ?? []));
+    if (!res.has_more || !res.pagination_key) return numbers;
+    paginationKey = res.pagination_key;
+  }
+  throw new Error("Retell phone number list has too many pages");
+}
+
+export function connectedPhoneNumbersByAgent(
+  phoneNumbers: RetellPhoneNumberSummary[]
+): Map<string, string[]> {
+  const result = new Map<string, string[]>();
+  for (const phone of phoneNumbers) {
+    const agentIds = new Set([
+      ...(phone.inbound_agents ?? []).map((a) => a.agent_id),
+      ...(phone.outbound_agents ?? []).map((a) => a.agent_id),
+      ...(phone.inbound_sms_agents ?? []).map((a) => a.agent_id),
+      ...(phone.outbound_sms_agents ?? []).map((a) => a.agent_id),
+    ]);
+    const label = phone.phone_number_pretty || phone.phone_number;
+    for (const agentId of agentIds) {
+      const list = result.get(agentId) ?? [];
+      list.push(label);
+      result.set(agentId, list);
+    }
+  }
+  return result;
+}
+
 interface AgentListPage {
   items?: {
     agent_id: string;

@@ -48,7 +48,18 @@ async function handleGET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(await retell.hydrateAgents(locationAgents));
+    const hydrated = await retell.hydrateAgents(locationAgents);
+    let numberMap: Map<string, string[]> | null = null;
+    try {
+      numberMap = retell.connectedPhoneNumbersByAgent(await retell.listPhoneNumbers());
+    } catch {
+      // Phone number visibility is supplementary; keep the agent list available
+      // when Retell's phone-number endpoint is temporarily unavailable.
+    }
+    return NextResponse.json(hydrated.map((agent) => ({
+      ...agent,
+      connected_phone_numbers: numberMap ? numberMap.get(agent.agent_id) ?? [] : null,
+    })));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to list agents";
