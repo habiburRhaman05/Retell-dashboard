@@ -40,7 +40,8 @@ function getApiKey(): string {
 
 async function retellFetch<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  config: { allowEmptyResponse?: boolean } = {}
 ): Promise<T> {
   const url = `${RETELL_BASE_URL}${path}`;
   const isFormData = options.body instanceof FormData;
@@ -64,6 +65,11 @@ async function retellFetch<T>(
   }
 
   if (res.status === 204) return undefined as T;
+  if (config.allowEmptyResponse) {
+    const body = await res.text();
+    if (!body.trim()) return undefined as T;
+    return JSON.parse(body) as T;
+  }
   return res.json();
 }
 
@@ -296,7 +302,7 @@ export async function publishAgentVersion(
       version_title: versionTitle,
       version_description: versionDescription,
     }),
-  });
+  }, { allowEmptyResponse: true });
 }
 
 export async function deleteAgentVersion(agentId: string): Promise<void> {
