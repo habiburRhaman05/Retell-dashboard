@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkRetellSignature } from "@/modules/usage/webhook";
 import { processCallEnded } from "@/modules/usage";
 import { prisma } from "@/lib/prisma";
+import { reconcileCallLimitForTenant } from "@/modules/call-limits";
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
@@ -48,6 +49,32 @@ export async function POST(request: NextRequest) {
       duration_ms: callData.duration_ms as number | undefined,
       call_cost: callData.call_cost as { combined_cost?: number } | undefined,
     });
+
+    if (result.status === "processed") {
+      const mapping = await prisma.locationAgent.findFirst({
+        where: { retellAgentId: String(callData.agent_id ?? "") },
+        select: { locationId: true },
+      });
+      const tenant = mapping
+        ? await prisma.tenant.findUnique({
+            where: { crmLocationId: mapping.locationId },
+            select: { id: true },
+          })
+        : null;
+      if (tenant) {
+        try {
+          await reconcileCallLimitForTenant(tenant.id);
+        } catch (error) {
+          // The usage event is durable and the scheduled reconciler retries;
+          // a Retell routing outage must not cause repeated webhook delivery.
+          console.error("[retell-webhook] call limit reconciliation failed", {
+            tenantId: tenant.id,
+            callId,
+            error: error instanceof Error ? error.message : "unknown error",
+          });
+        }
+      }
+    }
 
     await prisma.webhookInbox.updateMany({
       where: { callId, processedAt: null },

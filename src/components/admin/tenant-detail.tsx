@@ -493,9 +493,25 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
                               <button
                                 onClick={async () => {
                                   if (!confirm(`Delete ${formatMetricLabel(lp.metric)} limit?`)) return;
-                                  await fetch(`/api/admin/tenants/${tenant.id}/limits?metric=${lp.metric}`, { method: "DELETE" });
-                                  accessFetched.current = false;
-                                  fetchLimitsAndFeatures();
+                                  try {
+                                    const res = await fetch(`/api/admin/tenants/${tenant.id}/limits?metric=${lp.metric}`, { method: "DELETE" });
+                                    const data = await res.json();
+                                    if (!res.ok) {
+                                      setLimitMsg(data.error ?? "Failed to remove limit");
+                                      return;
+                                    }
+                                    const routeIssues = [
+                                      ...(data.callAccess?.routing?.errors ?? []),
+                                      ...(data.callAccess?.error ? [data.callAccess.error] : []),
+                                    ];
+                                    setLimitMsg(routeIssues.length
+                                      ? `Saved, but Retell routing needs attention: ${routeIssues.join("; ")}`
+                                      : "Saved successfully");
+                                    accessFetched.current = false;
+                                    fetchLimitsAndFeatures();
+                                  } catch {
+                                    setLimitMsg("Connection error");
+                                  }
                                 }}
                                 className="text-xs text-red-600 hover:text-red-800"
                               >
@@ -517,7 +533,7 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
                   <h4 className="text-xs font-medium text-gray-700 mb-3 uppercase">Add / Update Limit</h4>
                   {limitMsg && (
                     <p className={`text-xs mb-3 p-2 rounded ${
-                      limitMsg.startsWith("Saved") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+                      limitMsg === "Saved successfully" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
                     }`}>
                       {limitMsg}
                     </p>
@@ -599,13 +615,19 @@ export function TenantDetail({ tenant }: { tenant: TenantData }) {
                             mode: limitForm.mode,
                           }),
                         });
+                        const d = await res.json();
                         if (res.ok) {
-                          setLimitMsg("Saved successfully");
+                          const routeIssues = [
+                            ...(d.callAccess?.routing?.errors ?? []),
+                            ...(d.callAccess?.error ? [d.callAccess.error] : []),
+                          ];
+                          setLimitMsg(routeIssues.length
+                            ? `Saved, but Retell routing needs attention: ${routeIssues.join("; ")}`
+                            : "Saved successfully");
                           setLimitForm({ ...limitForm, limitValue: "" });
                           accessFetched.current = false;
                           fetchLimitsAndFeatures();
                         } else {
-                          const d = await res.json();
                           setLimitMsg(d.error ?? "Failed to save");
                         }
                       } catch {

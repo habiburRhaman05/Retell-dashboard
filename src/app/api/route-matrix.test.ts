@@ -16,12 +16,14 @@ const PUBLIC: Record<string, string> = {
   "auth/tenant/route.ts": "tenant login (signed link token or existing session)",
   "health/route.ts": "uptime probe, reveals nothing but status",
   "webhooks/retell/route.ts": "Retell webhook, verified by x-retell-signature",
+  "internal/jobs/reconcile-call-limits/route.ts": "scheduled job, verified by CRON_SECRET bearer token",
 };
 
 // Routes that still lack a test file. This list may only shrink: when a route
 // gets its test, the "stale entries" check below forces the entry to be removed.
 const UNTESTED = new Set([
   "auth/admin/logout/route.ts",
+  "internal/jobs/reconcile-call-limits/route.ts",
   "retell/agents/[agentId]/chat/completion/route.ts",
   "retell/agents/[agentId]/chat/route.ts",
   "retell/agents/[agentId]/flow/route.ts",

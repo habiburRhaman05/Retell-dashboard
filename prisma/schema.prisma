@@ -257,6 +257,24 @@ model FeatureLock {
   @@map("feature_locks")
 }
 
+// Stores the exact Retell voice-agent routing changed by call-limit enforcement.
+// The phone number and agents remain Retell resources; this row only captures
+// routing state so it can be restored safely after a limit clears.
+model PhoneRoutingSnapshot {
+  id              String   @id @default(cuid())
+  phoneNumber     String   @map("phone_number")
+  beforeRoutes    Json     @map("before_routes")
+  expectedRoutes  Json     @map("expected_routes")
+  status          String   @default("pending")
+  error           String?
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([phoneNumber])
+  @@index([status])
+  @@map("phone_routing_snapshots")
+}
+
 // ─── Tenant Features (admin switches) ──────────────────────
 
 model TenantFeature {

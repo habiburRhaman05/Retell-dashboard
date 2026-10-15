@@ -11,6 +11,7 @@ Set these in `.env.local` (never commit it):
 | `RETELL_WEBHOOK_KEY` | Optional. The Retell API key that carries the webhook badge, if it differs from `RETELL_API_KEY`. Webhooks are verified with this, falling back to `RETELL_API_KEY` |
 | `ADMIN_FRAME_ANCESTORS` | Optional. Space-separated sites allowed to show the admin panel in a frame. Defaults to GoHighLevel's domains. Add your white-label CRM domain here if you use one |
 | `SESSION_SECRET` | At least 32 random characters. Signs every login cookie and tenant link. Changing it logs everyone out and invalidates all links |
+| `CRON_SECRET` | Random bearer secret required by the scheduled call-limit reconciler |
 | `NEXT_PUBLIC_APP_URL` | Public address of this app, used when creating tenant links |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Used only by `scripts/seed-admin.mts` to create the first admin |
 
@@ -29,6 +30,12 @@ Point Retell at `https://<your-domain>/api/webhooks/retell`. Requests are checke
 `x-retell-signature` header (`v={timestamp},d={digest}`, signed with the Retell API key) and rejected if the
 signature is wrong or older than 5 minutes. If Retell answers 401, check the Vercel logs for
 `[retell-webhook] rejected`: the reason says what is wrong.
+
+## Hard call limits
+
+Hard `CALL_MINUTES` and `CALLS` policies block new dashboard web calls when usage reaches the limit. After a verified call-end webhook updates usage, the server saves a phone-routing snapshot and uses Retell's phone-number update API to remove only the blocked tenants' inbound/outbound agent assignments. It never deletes agents or phone numbers. SMS routing and other phone-number settings are not changed. If a number has an inbound webhook that can dynamically choose an agent, the automatic reconciliation leaves its inbound assignments unchanged and reports the route for review. When a limit is raised, deleted, or its period resets, saved voice routes are restored only if the current routes still match the state this feature applied; otherwise the snapshot is marked for review and current Retell routes are left untouched.
+
+Apply database migrations during deployment with `npx prisma migrate deploy`. The hourly reconciler at `/api/internal/jobs/reconcile-call-limits` requires `CRON_SECRET`; configure the same random secret in the deployment environment so it can retry failed route changes and restore routes after monthly period rollover.
 
 ## Getting Started
 

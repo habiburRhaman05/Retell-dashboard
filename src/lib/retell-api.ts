@@ -88,10 +88,18 @@ export interface AgentSummary {
 export interface RetellPhoneNumberSummary {
   phone_number: string;
   phone_number_pretty?: string | null;
-  inbound_agents?: { agent_id: string }[] | null;
-  outbound_agents?: { agent_id: string }[] | null;
+  inbound_webhook_url?: string | null;
+  inbound_agents?: RetellPhoneAgentAssignment[] | null;
+  outbound_agents?: RetellPhoneAgentAssignment[] | null;
   inbound_sms_agents?: { agent_id: string }[] | null;
   outbound_sms_agents?: { agent_id: string }[] | null;
+}
+
+export interface RetellPhoneAgentAssignment {
+  agent_id: string;
+  agent_version?: number | "latest";
+  weight?: number;
+  [key: string]: unknown;
 }
 
 interface PhoneNumberListPage {
@@ -113,6 +121,20 @@ export async function listPhoneNumbers(): Promise<RetellPhoneNumberSummary[]> {
     paginationKey = res.pagination_key;
   }
   throw new Error("Retell phone number list has too many pages");
+}
+
+/** Update only agent routing on an existing Retell number. Never buys or deletes numbers. */
+export async function updatePhoneNumberRoutes(
+  phoneNumber: string,
+  routes: {
+    inbound_agents: RetellPhoneNumberSummary["inbound_agents"];
+    outbound_agents: RetellPhoneNumberSummary["outbound_agents"];
+  }
+): Promise<void> {
+  await retellFetch<void>(`/update-phone-number/${encodeURIComponent(phoneNumber)}`, {
+    method: "PATCH",
+    body: JSON.stringify(routes),
+  }, { allowEmptyResponse: true });
 }
 
 export function connectedPhoneNumbersByAgent(

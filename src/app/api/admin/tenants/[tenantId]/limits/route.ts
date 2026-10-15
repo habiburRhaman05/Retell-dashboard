@@ -3,6 +3,7 @@ import { withAdmin } from "@/modules/auth/middleware";
 import { getAllLimitPolicies, setLimitPolicy, deleteLimitPolicy, getCurrentUsage } from "@/modules/limits";
 import { writeAuditLog } from "@/modules/audit";
 import { z } from "zod";
+import { reconcileCallLimitForTenant } from "@/modules/call-limits";
 
 const setLimitSchema = z.object({
   metric: z.enum(["AGENTS", "KNOWLEDGE_BASES", "CALL_MINUTES", "CALLS", "CONCURRENT_CALLS"]),
@@ -44,6 +45,15 @@ export const POST = withAdmin(async (request: NextRequest, session, { params }) 
     mode: parsed.data.mode as "hard" | "soft" | undefined,
   });
 
+  let callAccess: Awaited<ReturnType<typeof reconcileCallLimitForTenant>> | { error: string } | undefined;
+  if (parsed.data.metric === "CALL_MINUTES" || parsed.data.metric === "CALLS") {
+    try {
+      callAccess = await reconcileCallLimitForTenant(tenantId);
+    } catch (error) {
+      callAccess = { error: error instanceof Error ? error.message : "Call routing reconciliation failed" };
+    }
+  }
+
   await writeAuditLog({
     actorType: "admin",
     actorId: session.adminId,
@@ -54,7 +64,7 @@ export const POST = withAdmin(async (request: NextRequest, session, { params }) 
     after: { metric: parsed.data.metric, limitValue: parsed.data.limitValue },
   });
 
-  return NextResponse.json(policy, { status: 201 });
+  return NextResponse.json({ ...policy, ...(callAccess ? { callAccess } : {}) }, { status: 201 });
 });
 
 export const DELETE = withAdmin(async (request: NextRequest, session, { params }) => {
@@ -71,6 +81,15 @@ export const DELETE = withAdmin(async (request: NextRequest, session, { params }
     return NextResponse.json({ error: "Policy not found" }, { status: 404 });
   }
 
+  let callAccess: Awaited<ReturnType<typeof reconcileCallLimitForTenant>> | { error: string } | undefined;
+  if (metric === "CALL_MINUTES" || metric === "CALLS") {
+    try {
+      callAccess = await reconcileCallLimitForTenant(tenantId);
+    } catch (error) {
+      callAccess = { error: error instanceof Error ? error.message : "Call routing reconciliation failed" };
+    }
+  }
+
   await writeAuditLog({
     actorType: "admin",
     actorId: session.adminId,
@@ -80,5 +99,5 @@ export const DELETE = withAdmin(async (request: NextRequest, session, { params }
     after: { metric },
   });
 
-  return NextResponse.json({ deleted: true });
+  return NextResponse.json({ deleted: true, ...(callAccess ? { callAccess } : {}) });
 }, "owner");
